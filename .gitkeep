@@ -1,2 +1,0 @@
-find frontend user-api place-api nginx database/init docs scripts \
-  -type d -empty -exec touch {}/.gitkeep \;
