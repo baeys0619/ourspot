@@ -1,0 +1,25 @@
+cat > .gitignore <<'EOF'
+# Dependencies
+node_modules/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Database backups
+database/backups/
+
+# OS and temporary files
+.DS_Store
+*.tmp
+*.swp
+EOF
