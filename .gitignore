@@ -1,25 +1,15 @@
-cat > .gitignore <<'EOF'
-# Dependencies
-node_modules/
-
-# Environment secrets
+# 비공개 실행 설정과 검증용 임시 파일은 이미지/Git에 포함하지 않는다.
 .env
 .env.*
 !.env.example
-
-# Logs
+.runtime/
+node_modules/
 *.log
-
-# Build outputs
+database/backups/
+.DS_Store
+__pycache__/
 dist/
 build/
 coverage/
-
-# Database backups
-database/backups/
-
-# OS and temporary files
-.DS_Store
 *.tmp
 *.swp
-EOF

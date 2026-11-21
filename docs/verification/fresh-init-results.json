@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "storage": "tmpfs; no Docker volume created/deleted",
+  "initial_rows": {
+    "users": 0,
+    "places": 0,
+    "place_comments": 0
+  },
+  "category_utf8_hex": "ECB9B4ED8E98",
+  "schedule_constraint": "present"
+}

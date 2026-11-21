@@ -1,0 +1,227 @@
+[
+  {
+    "test": "proxy: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "proxy: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "proxy: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "proxy: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "front: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "front: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "front: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "front: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "user-api: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "user-api: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "user-api: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "user-api: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place-api: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place-api: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place-api: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place-api: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis: running/healthy/network",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis: bash",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis: published ports",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis: ARM64 image",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "Apache via Nginx",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "user-api: HTTP/MySQL/Redis via proxy",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place-api: HTTP/MySQL/Redis via proxy",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "unsupported API returns 404",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "unknown API prefix isolated from Apache",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "Nginx configuration valid",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "exactly three schema tables / UTC",
+    "result": "PASS",
+    "detail": "[{\"users\": 0, \"places\": 0, \"comments\": 0}]"
+  },
+  {
+    "test": "session cookie flags",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "User API session read by Place API module",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "24-hour TTL does not roll on read",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "tampered cookie rejected",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "logout removes shared session",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "absolute expiry enforced in both modules",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "place/comment fixture stored",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "MySQL restart preserves identical IDs/content/timestamps",
+    "result": "PASS",
+    "detail": "[{\"id\": 1, \"title\": \"영속성 확인 장소\", \"created_at\": \"2026-11-01 15:10:58.539\", \"updated_at\": \"2026-11-01 15:10:58.539\", \"comment_id\": 1, \"content\": \"재시작 전후 동일한 코멘트\"}]"
+  },
+  {
+    "test": "named DB volume mounted",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db outage: both APIs return 503",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "db recovery: both APIs healthy",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis outage: both APIs return 503",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "Redis outage fails closed",
+    "result": "PASS",
+    "detail": ""
+  },
+  {
+    "test": "redis recovery: both APIs healthy",
+    "result": "PASS",
+    "detail": ""
+  }
+]

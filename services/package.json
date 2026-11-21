@@ -1,0 +1,17 @@
+{
+  "name": "ourspot-infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent Express services with shared infrastructure configuration",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "dependencies": {
+    "bcrypt": "6.0.0",
+    "connect-redis": "7.1.1",
+    "express": "4.22.3",
+    "express-session": "1.19.0",
+    "mysql2": "3.24.6",
+    "redis": "4.7.1"
+  }
+}
