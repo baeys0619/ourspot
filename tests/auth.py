@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """운영 리소스와 분리된 Docker 환경에서 실제 로그인과 Redis 공유를 검증한다."""
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -13,6 +14,8 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import unquote
 from urllib.request import Request, urlopen
+
+from places import verify_places
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGES = dict(line.split('=', 1) for line in (ROOT / 'infra/images.env').read_text().splitlines()
@@ -142,7 +145,10 @@ def verify(env_dir):
           docker(*seed, stdin=f'{secrets.token_hex(32)}\n{secrets.token_hex(32)}\n') == 'ready')
 
     for service in ('user-api', 'place-api'):
-        run(service, f'ourspot-{service}:0.2', '--env-file', api_env)
+        image = f'ourspot-{service}:0.2'
+        if service == 'place-api':
+            image = os.environ.get('OURSPOT_PLACE_TEST_IMAGE', image)
+        run(service, image, '--env-file', api_env)
     run('front', 'ourspot-front:0.1')
     run('proxy', IMAGES['NGINX_IMAGE'], '--publish', '127.0.0.1::80',
         '--mount', f'type=bind,src={ROOT / "infra/nginx/default.conf"},dst=/etc/nginx/conf.d/default.conf,readonly')
@@ -150,8 +156,8 @@ def verify(env_dir):
     for service in ('user-api', 'place-api'):
         wait_for(service, lambda: healthy(service))
 
-    def http(path, method='GET', cookie=None, payload=None):
-        headers = {}
+    def http(path, method='GET', cookie=None, payload=None, headers=None):
+        headers = dict(headers or {})
         if cookie:
             headers['Cookie'] = cookie
         if payload is not None:
@@ -233,6 +239,23 @@ def verify(env_dir):
           [row['title'] for row in http(places + '?sort=oldest', cookie=b_cookie)[1]['data']['places']] == ['first', 'second'])
     check('invalid date filter returns 422', is_error(http(places + '?planned_date=2026-02-30', cookie=a_cookie),
                                                     422, 'VALIDATION_ERROR'))
+
+    def other_couple_cookie():
+        # 운영 계정은 두 개로 유지하고 테스트 DB에서만 기동 이후 다른 커플 계정을 만든다.
+        email = 'test_other@example.test'
+        sql(f"""INSERT INTO users (email, password_hash, display_name, couple_id)
+            SELECT '{email}', password_hash, '테스트 C', 'test-other-couple' FROM users WHERE id = {a_id}""")
+        response = login(email, password_a)
+        check('other couple also receives a real Redis session', response[0] == 200 and
+              response[1]['data']['user']['couple_id'] == 'test-other-couple')
+        other_id = response[1]['data']['user']['id']
+        sql(f"UPDATE places SET added_by = {other_id} WHERE couple_id = 'test-other-couple'")
+        return session_header(response[2])
+
+    other_cookie = other_couple_cookie()
+    sets_before_places = redis_sets()
+    verify_places(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, users)
+    check('Place CRUD does not rewrite authenticated Redis sessions', redis_sets() == sets_before_places)
     time.sleep(2)
     check('reads do not extend TTL', 0 < int(cache(a_id)[1]) < ttl_before)
     tampered = a_cookie[:-1] + ('x' if not a_cookie.endswith('x') else 'y')
@@ -277,7 +300,7 @@ def verify(env_dir):
     ''')
     check('invalid expiry cannot reach Redis as an invalid TTL', True)
     logs = '\n'.join(docker('logs', name(service)) for service in ('user-api', 'place-api', 'proxy'))
-    cookie_values = [cookie.partition('=')[2] for cookie in (a_cookie, b_cookie, newer, active)]
+    cookie_values = [cookie.partition('=')[2] for cookie in (a_cookie, b_cookie, other_cookie, newer, active)]
     session_ids = [unquote(value).removeprefix('s:').partition('.')[0] for value in cookie_values]
     check('passwords, session secret, cookie values and session IDs absent from service logs', all(
         value not in logs for value in (password_a, password_b, session_secret, *cookie_values, *session_ids)))
