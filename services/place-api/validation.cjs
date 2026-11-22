@@ -5,6 +5,7 @@ const placeFields = ['title', 'category', 'source_url', 'memo'];
 const scheduleFields = ['planned_date', 'visit_order', 'confirm_move'];
 const identityFields = ['id', 'userId', 'user_id', 'coupleId', 'couple_id', 'addedBy', 'added_by', 'added_by_name',
   'comment_id'];
+const commentIdentityFields = [...identityFields, 'commentId', 'placeId', 'place_id'];
 
 class PlaceRequestError extends Error {
   constructor(status, code, message, extra) {
@@ -19,13 +20,48 @@ function invalid(fieldErrors) {
 }
 
 function rejectIdentityFields(...inputs) {
-  if (inputs.some(input => input && identityFields.some(key => Object.hasOwn(input, key)))) {
+  rejectFields(identityFields, inputs);
+}
+
+function rejectFields(fields, inputs) {
+  if (inputs.some(input => input && fields.some(key => Object.hasOwn(input, key)))) {
     throw new PlaceRequestError(403, 'FORBIDDEN', '권한이 없는 작업이에요.');
   }
 }
 
 function requireEmptyQuery(query) {
   if (Object.keys(query).length > 0) invalid({query: '지원하지 않는 조회 조건이에요.'});
+}
+
+function requireEmptyBody(req, message) {
+  if (Number(req.get('Content-Length')) > 0 || req.get('Transfer-Encoding') !== undefined) {
+    invalid({body: message});
+  }
+}
+
+function validateCommentRequest(req) {
+  rejectFields(commentIdentityFields, [req.body, req.query]);
+  requireEmptyQuery(req.query);
+  const {phase} = req.params;
+  if (phase !== undefined && phase !== 'before' && phase !== 'after') {
+    invalid({phase: '코멘트 단계는 before 또는 after여야 해요.'});
+  }
+  return phase;
+}
+
+function requireCommentContent(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    invalid({body: 'JSON 객체를 입력해 주세요.'});
+  }
+  const fieldErrors = Object.fromEntries(Object.keys(input)
+    .filter(key => key !== 'content')
+    .map(key => [key, '지원하지 않는 필드예요.']));
+  const content = typeof input.content === 'string' ? input.content.trim() : '';
+  if (!content || !content.isWellFormed() || [...content].length > 1000) {
+    fieldErrors.content = '코멘트를 1~1000자로 입력해 주세요.';
+  }
+  if (Object.keys(fieldErrors).length > 0) invalid(fieldErrors);
+  return content;
 }
 
 // 수정 요청은 명시한 필드만 다룬다. 선택 필드의 null 또는 빈 문자열은 DB의 NULL로 저장한다.
@@ -136,4 +172,5 @@ function requirePlaceId(id) {
 }
 
 module.exports = {PlaceRequestError, invalid, rejectIdentityFields, requireEmptyQuery, validatePlaceFields,
-  validDate, requireExpectedTimestamp, requirePlaceId, placeNotFound};
+  requireEmptyBody, validateCommentRequest, requireCommentContent, validDate, requireExpectedTimestamp,
+  requirePlaceId, placeNotFound};

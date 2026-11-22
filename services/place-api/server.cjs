@@ -4,13 +4,15 @@ const express = require('express');
 const {start, asyncRoute} = require('./common/server.cjs');
 const {requireSession} = require('./common/infrastructure.cjs');
 const {PlaceRequestError, invalid, rejectIdentityFields, requireEmptyQuery, validatePlaceFields,
-  validDate, requireExpectedTimestamp, requirePlaceId, placeNotFound} = require('./validation.cjs');
+  requireEmptyBody, validateCommentRequest, requireCommentContent, validDate, requireExpectedTimestamp,
+  requirePlaceId, placeNotFound} = require('./validation.cjs');
 
 const base = '/api/places';
 const placeColumns = `p.id, p.title, p.category, p.source_url, p.memo, p.planned_date,
   p.visit_order, p.is_visited, p.visited_at, p.created_at, p.updated_at, p.added_by,
   u.display_name AS added_by_name`;
 const advanceVersion = 'GREATEST(UTC_TIMESTAMP(3), TIMESTAMPADD(MICROSECOND, 1000, updated_at))';
+const commentColumns = 'c.id, c.place_id, c.user_id, u.display_name, c.phase, c.content, c.created_at, c.updated_at';
 
 // 앱 오류만 계약의 JSON으로 반환한다. JSON 파싱과 예상 밖 DB 오류는 공통 핸들러가 처리한다.
 const placeRoute = handler => asyncRoute(async (req, res) => {
@@ -106,7 +108,8 @@ function registerRoutes(app, {db}) {
     const id = requirePlaceId(req.params.id);
     const {coupleId} = req.session;
     const place = await withCoupleWrite(db, coupleId, async connection => {
-      const current = await lockPlace(connection, coupleId, id, expected);
+      const current = await lockPlace(connection, coupleId, id);
+      requirePlaceVersion(current, expected);
       const fields = Object.fromEntries(Object.entries(changes).filter(([field, value]) => value !== current[field]));
       if (visited !== undefined && visited !== Boolean(current.is_visited)) {
         if (!visited) await requireNoAfterComments(connection, id);
@@ -130,19 +133,75 @@ function registerRoutes(app, {db}) {
   app.delete(`${base}/:id`, requireSession, json, placeRoute(async (req, res) => {
     rejectIdentityFields(req.body, req.query);
     requireEmptyQuery(req.query);
-    if (Number(req.get('Content-Length')) > 0 || req.get('Transfer-Encoding') !== undefined) {
-      invalid({body: '장소 삭제에는 요청 본문이 필요하지 않아요.'});
-    }
+    requireEmptyBody(req, '장소 삭제에는 요청 본문이 필요하지 않아요.');
     const expected = requireExpectedTimestamp(req.get('X-Expected-Updated-At'));
     const id = requirePlaceId(req.params.id);
     const {coupleId} = req.session;
     await withCoupleWrite(db, coupleId, async connection => {
-      const current = await lockPlace(connection, coupleId, id, expected);
+      const current = await lockPlace(connection, coupleId, id);
+      requirePlaceVersion(current, expected);
       const remaining = current.planned_date === null ? [] :
         await lockScheduleRows(connection, coupleId, [current.planned_date], id);
       // FK가 코멘트를 함께 삭제한다. 일정에 있던 장소라면 남은 장소의 순서와 버전도 함께 갱신한다.
       await connection.execute('DELETE FROM places WHERE couple_id = ? AND id = ?', [coupleId, id]);
       await reindexDate(connection, coupleId, remaining, id);
+    });
+    res.status(204).end();
+  }));
+
+  const comments = `${base}/:id/comments`;
+  app.get(comments, requireSession, json, placeRoute(async (req, res) => {
+    validateCommentRequest(req);
+    requireEmptyBody(req, '코멘트 조회에는 요청 본문이 필요하지 않아요.');
+    const id = requirePlaceId(req.params.id);
+    // 한 쿼리에서 장소 권한과 양쪽 코멘트를 조회해, 조회 도중 장소가 삭제되어도 404와 빈 배열을 구분한다.
+    const [rows] = await db.execute(
+      `SELECT ${commentColumns}
+       FROM places AS p
+       LEFT JOIN (place_comments AS c JOIN users AS u ON u.id = c.user_id)
+         ON c.place_id = p.id AND u.couple_id = p.couple_id
+       WHERE p.couple_id = ? AND p.id = ?
+       ORDER BY c.phase, c.user_id`, [req.session.coupleId, id]);
+    if (rows.length === 0) throw placeNotFound();
+    res.json({data: {comments: rows[0].id === null ? [] : rows.map(serializeComment)}});
+  }));
+
+  app.put(`${comments}/:phase`, requireSession, json, placeRoute(async (req, res) => {
+    const phase = validateCommentRequest(req);
+    const content = requireCommentContent(req.body);
+    const id = requirePlaceId(req.params.id);
+    const {coupleId, userId} = req.session;
+    const comment = await withCoupleWrite(db, coupleId, async connection => {
+      const place = await lockPlace(connection, coupleId, id);
+      requireEditablePhase(place, phase);
+      // 유일 키로 본인 행만 upsert한다. DB 정렬 규칙에서 같은 것으로 취급하는 문자열도 바이트로 비교한다.
+      await connection.execute(
+        `INSERT INTO place_comments (place_id, user_id, phase, content) VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           updated_at = IF(CAST(content AS BINARY) <> CAST(? AS BINARY), ${advanceVersion}, updated_at),
+           content = ?`, [id, userId, phase, content, content, content]);
+      const [[row]] = await connection.execute(
+        `SELECT ${commentColumns} FROM place_comments AS c JOIN users AS u ON u.id = c.user_id
+         WHERE c.place_id = ? AND c.user_id = ? AND c.phase = ?`, [id, userId, phase]);
+      return serializeComment(row);
+    });
+    res.json({data: {comment}});
+  }));
+
+  app.delete(`${comments}/:phase`, requireSession, json, placeRoute(async (req, res) => {
+    const phase = validateCommentRequest(req);
+    requireEmptyBody(req, '코멘트 삭제에는 요청 본문이 필요하지 않아요.');
+    const id = requirePlaceId(req.params.id);
+    const {coupleId, userId} = req.session;
+    await withCoupleWrite(db, coupleId, async connection => {
+      const place = await lockPlace(connection, coupleId, id);
+      const key = [id, userId, phase];
+      const [[own]] = await connection.execute(
+        'SELECT id FROM place_comments WHERE place_id = ? AND user_id = ? AND phase = ? FOR UPDATE', key);
+      // 본인 기록이 없다면 단계가 잠긴 상태에서도 204로 처리하고 상대의 기록은 건드리지 않는다.
+      if (!own) return;
+      requireEditablePhase(place, phase);
+      await connection.execute('DELETE FROM place_comments WHERE id = ?', [own.id]);
     });
     res.status(204).end();
   }));
@@ -159,6 +218,16 @@ async function getPlace(connection, coupleId, id) {
 function serializePlace(row) {
   return {...row, is_visited: Boolean(row.is_visited), visited_at: asUtc(row.visited_at),
     created_at: asUtc(row.created_at), updated_at: asUtc(row.updated_at)};
+}
+
+function serializeComment(row) {
+  return {...row, created_at: asUtc(row.created_at), updated_at: asUtc(row.updated_at)};
+}
+
+function requireEditablePhase(place, phase) {
+  if (Boolean(place.is_visited) !== (phase === 'after')) {
+    throw new PlaceRequestError(409, 'COMMENT_PHASE_LOCKED', '현재 방문 상태에서는 이 코멘트를 변경할 수 없어요.');
+  }
 }
 
 // mysql2의 UTC DATETIME 문자열을 정확히 세 자리 밀리초로 표기해 그대로 비교한다.
@@ -196,17 +265,20 @@ async function withCoupleWrite(db, coupleId, write) {
   }
 }
 
-async function lockPlace(connection, coupleId, id, expected) {
+async function lockPlace(connection, coupleId, id) {
   const [[row]] = await connection.execute(
     `SELECT id, title, category, source_url, memo, planned_date, visit_order, is_visited, updated_at
      FROM places WHERE couple_id = ? AND id = ? FOR UPDATE`, [coupleId, id]);
   if (!row) throw placeNotFound();
+  return row;
+}
+
+function requirePlaceVersion(row, expected) {
   const actual = asUtc(row.updated_at);
   if (expected !== actual) {
     throw new PlaceRequestError(409, 'UPDATE_CONFLICT', '장소가 변경됐어요. 최신 내용을 확인해 주세요.',
       {details: {current_updated_at: actual}});
   }
-  return row;
 }
 
 async function requireNoAfterComments(connection, placeId) {

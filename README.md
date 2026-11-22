@@ -43,11 +43,16 @@ https://www.figma.com/design/RJUp9mnBERMYSg2rnpR6GO/
 
 ```bash
 bash scripts/build.sh
-python3 tests/auth.py
+source infra/images.env
+docker build --build-arg "NODE_BASE=$NODE_BASE" --build-arg SERVICE=place-api \
+  -f services/Dockerfile -t ourspot-place-api:stage5-test .
+OURSPOT_PLACE_TEST_IMAGE=ourspot-place-api:stage5-test python3 tests/auth.py
 ```
 
 `tests/auth.py`는 별도 Docker 네트워크, 임시 MySQL·Redis, 임의 루프백 포트에
 테스트 환경을 띄우고 테스트 리소스만 정리한다. 운영 계정과 운영 설정은 사용하지 않는다.
+코멘트 검증은 격리 MySQL의 임시 파일시스템에서 A/B 권한, 방문 상태 경합,
+DB 오류 직후의 롤백을 검사하며 기존 인증·장소·일정·방문 상태 검증도 함께 실행한다.
 
 ## 새 설치의 초기 계정
 

@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 from urllib.parse import unquote
 from urllib.request import Request, urlopen
 
+from comments import verify_comments
 from places import verify_places
 from schedules import verify_schedules
 from visits import verify_visits
@@ -259,7 +260,8 @@ def verify(env_dir):
     verify_places(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, users)
     verify_schedules(http, sql, check, is_error, other_cookie, a_cookie, b_cookie)
     verify_visits(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, users)
-    check('Place CRUD, schedule and visit requests do not rewrite authenticated Redis sessions',
+    verify_comments(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, users)
+    check('Place CRUD, schedule, visit and comment requests do not rewrite authenticated Redis sessions',
           redis_sets() == sets_before_places)
     time.sleep(2)
     check('reads do not extend TTL', 0 < int(cache(a_id)[1]) < ttl_before)
