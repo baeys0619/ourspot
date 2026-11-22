@@ -100,7 +100,7 @@ def verify_places(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, 
             http(path, 'DELETE', a_cookie, {}, headers={'X-Expected-Updated-At': version}))))
     check('PATCH rejects empty changes, server timestamps and invalid changes on an unscheduled place', all(
         is_error(patch(path, a_cookie, version, **form), 422, 'VALIDATION_ERROR') for form in (
-            {}, {'updated_at': version}, {'visited_at': None}, {'is_visited': True},
+            {}, {'updated_at': version}, {'visited_at': None}, {'is_visited': 1},
             {'visit_order': None}, {'visit_order': 1}, {'confirm_move': True})))
 
     edited = patch(path, b_cookie, version, title='  공유 수정 ', category='기타', source_url=url, memo=' 메모 ')

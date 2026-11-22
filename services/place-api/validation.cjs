@@ -3,7 +3,8 @@
 const categories = ['카페', '맛집', '놀거리', '기타'];
 const placeFields = ['title', 'category', 'source_url', 'memo'];
 const scheduleFields = ['planned_date', 'visit_order', 'confirm_move'];
-const identityFields = ['id', 'userId', 'user_id', 'coupleId', 'couple_id', 'addedBy', 'added_by', 'added_by_name'];
+const identityFields = ['id', 'userId', 'user_id', 'coupleId', 'couple_id', 'addedBy', 'added_by', 'added_by_name',
+  'comment_id'];
 
 class PlaceRequestError extends Error {
   constructor(status, code, message, extra) {
@@ -32,7 +33,7 @@ function validatePlaceFields(input, creating) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     invalid({body: 'JSON 객체를 입력해 주세요.'});
   }
-  const allowed = creating ? placeFields : [...placeFields, ...scheduleFields, 'expected_updated_at'];
+  const allowed = creating ? placeFields : [...placeFields, ...scheduleFields, 'is_visited', 'expected_updated_at'];
   const fieldErrors = Object.fromEntries(Object.keys(input)
     .filter(key => !allowed.includes(key))
     .map(key => [key, '지원하지 않는 필드예요.']));
@@ -65,7 +66,18 @@ function validatePlaceFields(input, creating) {
       fieldErrors.memo = '메모를 1000자 이하로 입력해 주세요.';
     }
   }
-  if (!creating) validateScheduleFields(input, values, fieldErrors);
+  if (!creating) {
+    validateScheduleFields(input, values, fieldErrors);
+    if (Object.hasOwn(input, 'is_visited')) {
+      if (typeof input.is_visited !== 'boolean') {
+        fieldErrors.is_visited = '방문 상태는 true 또는 false로 입력해 주세요.';
+      } else if (Object.hasOwn(input, 'planned_date') || Object.hasOwn(input, 'visit_order')) {
+        fieldErrors.is_visited = '방문 상태와 일정은 따로 변경해 주세요.';
+      } else {
+        values.is_visited = input.is_visited;
+      }
+    }
+  }
   if (!creating && Object.keys(values).length === 0 && Object.keys(fieldErrors).length === 0) {
     fieldErrors.body = '변경할 장소 필드를 입력해 주세요.';
   }

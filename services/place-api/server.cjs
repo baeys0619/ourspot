@@ -102,18 +102,22 @@ function registerRoutes(app, {db}) {
     rejectIdentityFields(req.body, req.query);
     requireEmptyQuery(req.query);
     const expected = requireExpectedTimestamp(req.body?.expected_updated_at);
-    const {planned_date: date, visit_order: order, ...changes} = validatePlaceFields(req.body, false);
+    const {planned_date: date, visit_order: order, is_visited: visited, ...changes} = validatePlaceFields(req.body, false);
     const id = requirePlaceId(req.params.id);
     const {coupleId} = req.session;
     const place = await withCoupleWrite(db, coupleId, async connection => {
       const current = await lockPlace(connection, coupleId, id, expected);
       const fields = Object.fromEntries(Object.entries(changes).filter(([field, value]) => value !== current[field]));
+      if (visited !== undefined && visited !== Boolean(current.is_visited)) {
+        if (!visited) await requireNoAfterComments(connection, id);
+        fields.is_visited = visited;
+      }
       const schedule = await planScheduleChange(connection, coupleId, current, {date, order, confirm: req.body.confirm_move});
       if (schedule) {
         fields.planned_date = schedule.date;
         fields.visit_order = schedule.order;
       }
-      // 기본 정보와 일정이 함께 바뀌어도 대상 장소의 버전은 한 번만 증가시킨다.
+      // 기본 정보와 일정 또는 상태가 함께 바뀌어도 대상 장소의 버전은 한 번만 증가시킨다.
       await updatePlace(connection, coupleId, id, fields);
       if (schedule) {
         for (const group of schedule.groups) await reindexDate(connection, coupleId, group, id);
@@ -205,6 +209,15 @@ async function lockPlace(connection, coupleId, id, expected) {
   return row;
 }
 
+async function requireNoAfterComments(connection, placeId) {
+  // 커플과 부모 장소를 잠근 뒤 최신 After 기록을 확인한다. 코멘트 쓰기도 같은 잠금 순서를 따른다.
+  const [[comment]] = await connection.execute(
+    "SELECT id FROM place_comments WHERE place_id = ? AND phase = 'after' LIMIT 1 FOR UPDATE", [placeId]);
+  if (comment) {
+    throw new PlaceRequestError(409, 'AFTER_COMMENTS_EXIST', '작성자가 방문 후 기록을 먼저 삭제해야 해요.');
+  }
+}
+
 async function planScheduleChange(connection, coupleId, current, {date, order, confirm}) {
   const originalDate = current.planned_date;
   const targetDate = date === undefined ? originalDate : date;
@@ -269,10 +282,14 @@ async function reindexDate(connection, coupleId, rows, targetId) {
 async function updatePlace(connection, coupleId, id, fields) {
   const entries = Object.entries(fields);
   if (entries.length === 0) return;
-  // 컬럼은 검증한 기본 필드와 서버가 계산한 일정 필드뿐이며, 모든 값은 바인딩한다.
-  const assignments = entries.map(([column]) => `${column} = ?`).join(', ');
+  // 컬럼은 검증한 필드와 서버가 계산한 일정 필드로 제한하고, 값은 바인딩한다.
+  const assignments = entries.map(([column]) => `${column} = ?`);
+  // 실제 상태 전환 때만 DB UTC 시각을 저장하거나 지운다. 버전과 시간은 같은 UPDATE에서 갱신한다.
+  if (Object.hasOwn(fields, 'is_visited')) {
+    assignments.push(fields.is_visited ? 'visited_at = UTC_TIMESTAMP(3)' : 'visited_at = NULL');
+  }
   await connection.execute(
-    `UPDATE places SET ${assignments}, updated_at = ${advanceVersion} WHERE couple_id = ? AND id = ?`,
+    `UPDATE places SET ${assignments.join(', ')}, updated_at = ${advanceVersion} WHERE couple_id = ? AND id = ?`,
     [...entries.map(([, value]) => value), coupleId, id]);
 }
 
