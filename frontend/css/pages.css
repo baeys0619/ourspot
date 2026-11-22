@@ -1,0 +1,127 @@
+.login-header { grid-template-columns: 4.09fr 1fr; min-height: 74px; font-size: .8125rem; }
+.login-layout { display: grid; grid-template-columns: minmax(0, 570fr) minmax(0, 480fr); gap: min(5vw, 70px); padding-top: 80px; }
+.login-intro { padding-top: 46px; font-size: 1.25rem; }
+.login-intro h1 { margin-bottom: 16px; font-size: 2.5rem; }
+.login-description {
+  max-width: 476px;
+  margin-top: 52px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ourspot-border);
+  color: var(--ourspot-text-secondary);
+  font-size: .9375rem;
+}
+.login-card { padding: 28px; border: 1px solid var(--ourspot-border); border-radius: 12px; }
+.login-lead { margin-top: 18px; margin-bottom: 44px; font-size: .875rem; }
+#login-form { display: grid; gap: 18px; }
+#login-submit { margin-top: 24px; }
+.login-footer { margin-top: 115px; padding: 18px 0 40px; border-top: 1px solid var(--ourspot-border); font-size: .8125rem; }
+
+.library { padding: 63px 0 56px; }
+.library-intro { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.library-intro h1, .detail h1 { font-size: 2rem; }
+.library-intro p { margin-top: 5px; font-size: .875rem; }
+#add-place { width: 194px; flex-shrink: 0; }
+.library > .feedback { margin: 12px 0; }
+
+.library-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 792fr) minmax(0, 308fr);
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--ourspot-border);
+}
+
+.filters { display: grid; grid-template-columns: repeat(2, minmax(0, 160px)); gap: 25px; }
+.filters button[aria-pressed="true"] { color: var(--ourspot-primary); font-weight: 700; }
+#sort {
+  justify-self: start;
+  min-height: 44px;
+  max-width: 100%;
+  border: 0;
+  background: var(--ourspot-surface);
+  text-overflow: ellipsis;
+  color: var(--ourspot-text-secondary);
+  font-size: .8125rem;
+}
+
+.library-grid { display: grid; grid-template-columns: minmax(0, 642fr) minmax(0, 446fr); gap: 32px; align-items: start; }
+.place-list { padding: 0; list-style: none; }
+.place-row { border-bottom: 1px solid var(--ourspot-border); }
+.place-row a {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 386fr) minmax(0, 171fr);
+  align-items: center;
+  gap: 4px 11px;
+  min-height: 85px;
+  padding: 15px 18px 15px 32px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.place-row a:hover { background: var(--ourspot-background-muted); }
+.place-row a[aria-current="true"] { background: var(--ourspot-soft-purple); }
+.place-row a[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 20% auto 20% 18px;
+  width: 3px;
+  background: var(--ourspot-primary);
+}
+.place-row .row-title { font-size: 1.0625rem; font-weight: 500; align-self: end; }
+.place-row a[aria-current="true"] .row-title { font-weight: 700; }
+.place-row .row-meta { grid-column: 1; grid-row: 2; align-self: start; font-size: .75rem; color: var(--ourspot-text-secondary); }
+.place-row .tag { grid-column: 2; grid-row: 1 / span 2; width: min(149px, 100%); justify-self: start; }
+.place-row a[aria-current="true"] .tag:not(.visited) { background: var(--ourspot-surface); }
+.place-row .tag.unscheduled { background: none; padding-left: 0; }
+
+.selected-place { display: grid; gap: 20px; padding: 26px; border-radius: 12px; background: var(--ourspot-background-muted); }
+.selected-place > p { font-size: .75rem; }
+.selected-place h2 { font-size: 1.6875rem; }
+.selected-place dl { padding-top: 20px; border-top: 1px solid var(--ourspot-border); }
+.selected-place dl a { color: inherit; }
+.selected-place .secondary { margin-top: 12px; color: var(--ourspot-primary); }
+.library-note { margin-top: 24px; font-size: .8125rem; }
+.skeleton { display: grid; gap: 18px; margin-top: 14px; }
+.skeleton span { display: block; height: 22px; width: min(360px, 85%); border-radius: 6px; background: var(--ourspot-border); }
+.skeleton span:nth-child(2) { width: min(280px, 70%); }
+
+.detail { padding-block: 42px; }
+.detail article { margin-top: 16px; }
+.detail .tags { margin: 8px 0 20px; }
+.detail-info { border-top: 1px solid var(--ourspot-border); padding-top: 20px; }
+.detail-info h2 { margin-bottom: 20px; font-size: 1.25rem; }
+.back-link { display: inline-flex; align-items: center; min-height: 44px; font-size: .875rem; text-decoration: none; }
+
+@media (max-width: 767px) {
+  .login-header { display: grid; grid-template-columns: 1.38fr 1fr; min-height: 61px; }
+  .login-layout { display: block; padding-top: 62px; }
+  .login-intro { padding-top: 0; font-size: 1rem; }
+  .login-intro h1 { font-size: 1.6875rem; margin-bottom: 18px; }
+  .login-card { border: 0; padding: 0; margin-top: 53px; }
+  #login-submit { margin-top: 0; }
+  .login-footer { margin-top: 130px; padding-bottom: 36px; font-size: .75rem; }
+
+  .library { padding-top: 39px; }
+  .library-intro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 15px; }
+  .library-intro h1, .detail h1 { font-size: 1.5625rem; }
+  .library-intro p { margin-top: 12px; font-size: .8125rem; }
+  #add-place { width: 100%; }
+  .library-toolbar { display: block; padding-bottom: 0; margin-bottom: 0; border-bottom: 0; }
+  .filters { grid-template-columns: repeat(2, 1fr); gap: 12px; border-bottom: 1px solid var(--ourspot-border); }
+  .filters button { font-size: .9375rem; }
+  #sort { font-size: .75rem; }
+  .library-grid { display: block; }
+  .selected-place { display: none; }
+  .place-row a, .place-row a[aria-current="true"] { grid-template-columns: minmax(0, 3fr) minmax(44px, 1fr); gap: 6px 8px; padding: 14px 0; background: var(--ourspot-surface); }
+  .place-row a[aria-current="true"]::before { content: none; }
+  .place-row .row-title { font-size: 1rem; font-weight: 700; }
+  .place-row .row-more { font-size: .8125rem; color: var(--ourspot-primary); }
+  .place-row .row-meta { grid-row: 2; }
+  .place-row .tag { grid-area: 3 / 1; width: auto; padding: 0; background: transparent; }
+  .detail { padding-top: 20px; }
+  /* 모바일 Safari에서 필드에 포커스할 때 자동 확대를 줄인다. */
+  .field :is(input, select, textarea) { font-size: 1rem; }
+}

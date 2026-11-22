@@ -1,5 +1,95 @@
 <!doctype html>
-<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OURSPOT 인프라 확인</title>
-<h1>OURSPOT</h1><p>Docker 인프라 1단계 정적 응답 확인 페이지입니다.</p>
-<p>실제 서비스 화면과 로그인 기능은 후속 단계에서 구현합니다.</p></html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>장소 보관함 · OURSPOT</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script type="module" src="/js/library.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <div class="frame header-bar">
+      <a class="brand" href="/index.html">OURSPOT</a>
+      <nav aria-label="주요 메뉴">
+        <a href="/index.html" aria-current="page"><span class="desktop">장소 보관함</span><span class="mobile">장소</span></a>
+        <span class="nav-disabled" aria-disabled="true"><span class="desktop">데이트 계획</span><span class="mobile">계획</span><span class="sr-only"> · 준비 중</span></span>
+      </nav>
+      <div id="account" class="account" hidden>
+        <span id="current-user"></span>
+        <button type="button" id="logout" class="text-button">로그아웃</button>
+      </div>
+    </div>
+  </header>
+  <main class="frame library" id="main" tabindex="-1">
+    <div class="library-intro">
+      <div>
+        <h1>우리의 장소</h1>
+        <p class="muted"><span class="desktop">두 사람이 함께 저장한 장소입니다.</span><span class="mobile">서로 저장한 장소를 함께 볼 수 있어요.</span></p>
+      </div>
+      <button id="add-place" class="button primary" type="button" disabled>+ 장소 저장</button>
+    </div>
+    <p id="account-error" class="feedback error" role="alert"></p>
+    <p id="save-status" class="feedback success" role="status"></p>
+    <div class="library-toolbar" id="library-toolbar" hidden>
+      <div class="filters" role="group" aria-label="방문 상태 필터">
+        <button type="button" class="text-button" data-status="unvisited" aria-pressed="true">가볼 곳 <span id="unvisited-count"></span></button>
+        <button type="button" class="text-button" data-status="visited" aria-pressed="false">다녀온 곳 <span id="visited-count"></span></button>
+      </div>
+      <select id="sort" aria-label="저장한 날짜 정렬">
+        <option value="oldest">저장한 날짜 · 오래된 순</option>
+        <option value="latest">저장한 날짜 · 최신 순</option>
+      </select>
+    </div>
+    <section id="results" aria-label="장소 목록" aria-busy="true">
+      <div id="list-message" class="feedback" role="status">로그인 상태를 확인하는 중…</div>
+      <div class="library-grid">
+        <ul id="places" class="place-list"></ul>
+        <aside id="selected-place" class="selected-place" aria-label="선택한 장소" hidden></aside>
+      </div>
+      <p class="library-note muted desktop" id="library-note" hidden>오래 저장한 미방문 장소를 먼저 확인할 수 있어요.</p>
+    </section>
+  </main>
+  <dialog id="place-dialog" aria-labelledby="save-title" aria-describedby="save-description">
+    <form id="place-form" method="post" novalidate>
+      <h2 id="save-title">장소 저장</h2>
+      <p id="save-description" class="muted">가고 싶은 장소를 두 사람의 보관함에 저장해요.</p>
+      <p id="save-error" class="feedback error" role="alert"></p>
+      <div class="field">
+        <label for="place-title">장소명 *</label>
+        <input id="place-title" name="title" required autofocus placeholder="장소 이름" aria-describedby="title-error">
+        <p id="title-error" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="category">카테고리 *</label>
+        <select id="category" name="category" required aria-describedby="category-error">
+          <option>카페</option>
+          <option>맛집</option>
+          <option>놀거리</option>
+          <option>기타</option>
+        </select>
+        <p id="category-error" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="source-url">URL (선택)</label>
+        <input id="source-url" name="source_url" type="url" placeholder="https://example.com/spot" aria-describedby="source_url-error">
+        <p id="source_url-error" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="memo">메모 (선택)</label>
+        <textarea id="memo" name="memo" rows="1" placeholder="방문하고 싶은 이유" aria-describedby="memo-error"></textarea>
+        <p id="memo-error" class="field-error"></p>
+      </div>
+      <p class="fine-print">저장한 사람과 날짜는 자동으로 기록돼요.</p>
+      <div class="dialog-actions">
+        <button type="button" id="cancel-save" class="button secondary">취소</button>
+        <button type="submit" id="save-place" class="button primary">장소 저장</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

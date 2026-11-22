@@ -1,0 +1,21 @@
+/* Figma V4의 공통 색상, 글꼴과 레이아웃 값. */
+:root {
+  --ourspot-background: #fff;
+  --ourspot-surface: #fff;
+  --ourspot-background-muted: #f8f7fa;
+  --ourspot-border: #e5e1ea;
+  --ourspot-text-primary: #18151f;
+  --ourspot-text-secondary: #595463;
+  --ourspot-text-muted: #77717f;
+  --ourspot-primary: #6941c6;
+  --ourspot-primary-pressed: #5530a6;
+  --ourspot-on-primary: #fff;
+  --ourspot-soft-purple: #f2edfc;
+  --ourspot-success: #176448;
+  --ourspot-success-bg: #edf7f0;
+  --ourspot-warning: #8a602c;
+  --ourspot-error: #a51d32;
+  --ourspot-error-bg: #fdf0f2;
+  --frame-width: 1120px;
+  --gutter: 24px;
+}

@@ -1,0 +1,55 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--ourspot-text-primary);
+  background: var(--ourspot-background);
+  font: 400 1rem / 1.55 "Noto Sans KR", "Noto Sans CJK KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+h1, h2, p, ul, dl, dd { margin: 0; }
+h1, h2 { line-height: 1.5; }
+h2 { font-size: 1.5rem; }
+button, input, select, textarea { color: inherit; font: inherit; }
+button, select { cursor: pointer; }
+a { color: var(--ourspot-primary); }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--ourspot-primary); outline-offset: 3px; }
+.mobile { display: none; }
+.muted { color: var(--ourspot-text-secondary); }
+.fine-print { font-size: .75rem; color: var(--ourspot-text-secondary); }
+
+.frame {
+  width: min(var(--frame-width), calc(100% - 2 * var(--gutter)));
+  margin-inline: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 1;
+  left: var(--gutter);
+  top: 8px;
+  padding: 8px 12px;
+  background: var(--ourspot-surface);
+}
+
+.skip-link:not(:focus) { clip-path: inset(50%); }
+
+@media (max-width: 767px) {
+  .desktop { display: none !important; }
+  .mobile { display: revert; }
+}
+
+@media (max-width: 359px) {
+  :root { --gutter: 16px; }
+}

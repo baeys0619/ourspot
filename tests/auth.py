@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """운영 리소스와 분리된 Docker 환경에서 실제 로그인과 Redis 공유를 검증한다."""
+import argparse
+import getpass
 import json
 import os
 import re
 import secrets
 import subprocess
+import sys
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -57,7 +60,7 @@ def wait_for(label, ready):
     raise RuntimeError(f'{label} readiness timeout')
 
 
-def verify(env_dir):
+def verify(env_dir, *, on_ready=None, passwords=None, front_image='ourspot-front:0.1', port=''):
     def name(service):
         return NETWORK + '-' + service
 
@@ -137,6 +140,8 @@ def verify(env_dir):
     sql('ALTER TABLE users AUTO_INCREMENT = 9')
     password_a = ' ' + secrets.token_urlsafe(24) + ' '
     password_b = secrets.token_hex(30) + '한' * 4
+    if passwords is not None:
+        password_a, password_b = passwords
     started = time.monotonic()
     result = docker(*seed, stdin=f'{password_a}\n{password_b}\n')
     check(f'ARM64 bcrypt seed cost 12 ({time.monotonic() - started:.2f}s with Docker startup)', result == 'created')
@@ -150,14 +155,18 @@ def verify(env_dir):
     for service in ('user-api', 'place-api'):
         image = f'ourspot-{service}:0.2'
         if service == 'place-api':
-            image = os.environ.get('OURSPOT_PLACE_TEST_IMAGE', image)
+            image = ('ourspot-place-api:0.6' if on_ready else
+                     os.environ.get('OURSPOT_PLACE_TEST_IMAGE', image))
         run(service, image, '--env-file', api_env)
-    run('front', 'ourspot-front:0.1')
-    run('proxy', IMAGES['NGINX_IMAGE'], '--publish', '127.0.0.1::80',
+    run('front', front_image)
+    run('proxy', IMAGES['NGINX_IMAGE'], '--publish', f'127.0.0.1:{port}:80',
         '--mount', f'type=bind,src={ROOT / "infra/nginx/default.conf"},dst=/etc/nginx/conf.d/default.conf,readonly')
     port = docker('port', name('proxy'), '80/tcp').rsplit(':', 1)[1]
-    for service in ('user-api', 'place-api'):
+    for service in ('user-api', 'place-api', 'front'):
         wait_for(service, lambda: healthy(service))
+
+    if on_ready is not None:
+        return on_ready(f'http://127.0.0.1:{port}', password_a, password_b)
 
     def http(path, method='GET', cookie=None, payload=None, headers=None):
         headers = dict(headers or {})
@@ -313,11 +322,11 @@ def verify(env_dir):
         value not in logs for value in (password_a, password_b, session_secret, *cookie_values, *session_ids)))
 
 
-if __name__ == '__main__':
+def run_isolated(**options):
     with tempfile.TemporaryDirectory(prefix='ourspot-auth-') as env_dir:
         docker('network', 'create', NETWORK)
         try:
-            verify(env_dir)
+            return verify(env_dir, **options)
         finally:
             try:
                 containers = docker('ps', '-aq', '--filter', 'label=' + TEST_LABEL).splitlines()
@@ -325,3 +334,32 @@ if __name__ == '__main__':
                     docker('rm', '-f', *containers)
             finally:
                 docker('network', 'rm', NETWORK)
+
+
+def hold_preview(url, _password_a, _password_b):
+    print(f'격리 미리보기 · {url}/login.html', flush=True)
+    print('종료하려면 Ctrl+C를 누르세요.', flush=True)
+    while True:
+        time.sleep(30)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--preview', action='store_true', help='격리 미리보기를 열고 종료 신호까지 유지')
+    parser.add_argument('--port', type=int, default=8180, help='격리 미리보기의 Ubuntu 루프백 포트')
+    args = parser.parse_args()
+    if args.preview:
+        if not 1024 <= args.port <= 65535:
+            parser.error('--port는 1024~65535 범위여야 합니다.')
+        # 로컬에서 정한 암호를 seed 창에만 전달하고 터미널과 Git에는 기록하지 않는다.
+        if not sys.stdin.isatty():
+            parser.error('격리 비밀번호 입력에는 대화형 터미널이 필요합니다.')
+        passwords = (getpass.getpass('격리 사용자 A 비밀번호: '), getpass.getpass('격리 사용자 B 비밀번호: '))
+        if passwords[0] == passwords[1] or any(not 1 <= len(password.encode()) <= 72 for password in passwords):
+            parser.error('서로 다른 UTF-8 1~72바이트 비밀번호를 입력해야 합니다.')
+        try:
+            run_isolated(on_ready=hold_preview, passwords=passwords, front_image='ourspot-front:0.2', port=args.port)
+        except KeyboardInterrupt:
+            pass
+    else:
+        run_isolated()

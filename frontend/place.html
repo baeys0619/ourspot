@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>장소 상세 · OURSPOT</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script type="module" src="/js/detail.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <div class="frame header-bar">
+      <a class="brand" href="/index.html">OURSPOT</a>
+      <nav aria-label="주요 메뉴">
+        <a href="/index.html"><span class="desktop">장소 보관함</span><span class="mobile">장소</span></a>
+        <span class="nav-disabled" aria-disabled="true"><span class="desktop">데이트 계획</span><span class="mobile">계획</span><span class="sr-only"> · 준비 중</span></span>
+      </nav>
+      <div id="account" class="account" hidden>
+        <span id="current-user"></span>
+        <button type="button" id="logout" class="text-button">로그아웃</button>
+      </div>
+    </div>
+  </header>
+  <main class="frame detail" id="main" tabindex="-1">
+    <a class="back-link" href="/index.html">‹ 장소 보관함<span class="desktop">으로</span></a>
+    <p id="account-error" class="feedback error" role="alert"></p>
+    <p id="detail-status" role="status">장소를 불러오는 중…</p>
+    <article id="place-detail" aria-busy="true" hidden>
+      <h1 id="detail-title"></h1>
+      <div id="detail-tags" class="tags"></div>
+      <section class="detail-info" aria-labelledby="info-title">
+        <h2 id="info-title">장소 정보</h2>
+        <dl id="detail-fields" class="place-fields"></dl>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

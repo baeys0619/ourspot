@@ -109,3 +109,52 @@ bash scripts/seed-users.sh
 검증은 Ubuntu의 루프백 주소나 SSH 터널을 사용하며 비밀번호·쿠키를 화면과 로그에 남기지 않는다.
 적용 중 오류가 발생하면 해당 0.2 API 컨테이너만 정리하고 보관한 0.1 컨테이너를
 원래 이름으로 돌린 뒤 시작한다. 설치한 계정과 MySQL 볼륨은 그대로 유지된다.
+
+## 프론트엔드 1단계 격리 미리보기
+
+Ubuntu의 저장소 루트에서 실행한다. 로컬 Docker 이미지 `ourspot-user-api:0.2`,
+`ourspot-place-api:0.6` 및 `infra/images.env`에 지정된 베이스 이미지가 필요하다.
+
+```bash
+source infra/images.env
+docker build --build-arg "FRONT_BASE=$FRONT_BASE" -f frontend/Dockerfile -t ourspot-front:0.2 .
+python3 tests/auth.py --preview --port 8180
+```
+
+프롬프트에는 격리 사용자 A와 B의 서로 다른 비밀번호를 입력한다. 미리보기는 별도
+Docker 네트워크에 6개 컨테이너를 만들고 MySQL·Redis를 임시 파일시스템에서 실행한다.
+장소는 처음에 0건이며 폼에서 등록한 장소는 이 환경에만 저장된다. 종료하려면 실행
+터미널에서 Ctrl+C를 누른다. 해당 미리보기의 컨테이너와 임시 데이터가 정리된다.
+
+Mac 터미널에서 별도로 다음 명령을 실행하고, 시크릿 창이나 미리보기 전용 브라우저
+프로필에서 [격리 미리보기](http://127.0.0.1:8180/login.html)를 연다. 운영 탭과
+브라우저 프로필을 분리하는 이유는 쿠키가 포트를 구분하지 않기 때문이다.
+
+```bash
+ssh -N -L 127.0.0.1:8180:127.0.0.1:8180 <Ubuntu-SSH-계정>@<Ubuntu-호스트>
+```
+
+`user_a@example.test` 또는 `user_b@example.test`와 방금 정한 해당 계정의 비밀번호로
+로그인한다. Mac의 8180이 사용 중이면 SSH 명령의 첫 번째 8180과 브라우저 주소의
+포트만 함께 바꾼다. Ubuntu의 8180이 사용 중이면 `--port`와 SSH 명령의 두 번째
+8180을 함께 바꾼다. Ubuntu에서 직접 접속할 때는 SSH 포워딩 없이 루프백 주소를 사용한다.
+
+Firefox 및 geckodriver를 사용할 수 있는 호스트에서는 같은 이미지로 다음 브라우저
+검증을 실행할 수 있다.
+
+```bash
+python3 tests/frontend.py
+```
+
+Snap Firefox에서 WebDriver와 브라우저가 기본 임시 경로를 공유할 수 없으면
+`OURSPOT_FIREFOX_PROFILE_ROOT`에 Firefox가 접근할 수 있는 Snap 공용 디렉터리를 설정한다.
+실행 시 출력한 임시 디렉터리에 비교용 캡처와 WebDriver 로그가 생성된다.
+
+### 운영 Frontend 교체 절차
+
+별도 승인 후 기존 Frontend의 이미지 태그와 컨테이너 구성을 기록한다. 격리 미리보기로
+신규 이미지를 검증한 다음 기존 `ourspot-front`를 중지하고 롤백용 이름으로 보관한다.
+`ourspot-front:0.2`를 `ourspot-front`라는 이름으로 기존 `ourspot-net`에 연결하고
+기존 재시작 정책을 적용한다. Nginx가 새 Frontend를 찾으면 운영 진입점 8080에서 HTML,
+CSS, JS를 확인하고 인증·장소 목록을 조회한다. 롤백은 신규 Frontend를 중지해 이름을
+비운 뒤 보관한 기존 컨테이너를 `ourspot-front`로 되돌리고 시작한다.

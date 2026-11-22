@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 · OURSPOT</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script type="module" src="/js/login.js"></script>
+</head>
+<body class="login-page">
+  <header class="site-header">
+    <div class="frame header-bar login-header">
+      <span class="brand">OURSPOT</span>
+      <span class="muted">우리 여기 가자</span>
+    </div>
+  </header>
+  <main class="frame login-layout">
+    <section class="login-intro" aria-labelledby="intro-title">
+      <h1 id="intro-title">우리 여기 가자.</h1>
+      <p class="desktop">가고 싶은 장소는 함께 저장하고,<br>가기로 한 날은 함께 정해요.</p>
+      <p class="mobile muted">둘이 가고 싶은 장소를<br>한곳에 모아둬요.</p>
+      <p class="desktop login-description">처음 저장한 곳부터 아직 못 가본 곳까지,<br>두 사람의 장소를 한곳에서 관리할 수 있어요.</p>
+    </section>
+    <section class="login-card" aria-labelledby="login-title">
+      <h2 id="login-title" class="desktop">로그인</h2>
+      <p class="desktop muted login-lead">미리 등록된 계정으로 로그인해 주세요.</p>
+      <p id="session-status" role="status">로그인 상태를 확인하는 중…</p>
+      <form id="login-form" method="post" novalidate hidden>
+        <p id="form-error" class="feedback error" role="alert"></p>
+        <div class="field">
+          <label for="email-input">이메일</label>
+          <input id="email-input" name="email" type="email" required autocomplete="username" autocapitalize="none" placeholder="이메일 주소" aria-describedby="email-error">
+          <p id="email-error" class="field-error"></p>
+        </div>
+        <div class="field">
+          <label for="password-input">비밀번호</label>
+          <input id="password-input" name="password" type="password" required autocomplete="current-password" placeholder="비밀번호를 입력해 주세요" aria-describedby="password-error">
+          <p id="password-error" class="field-error"></p>
+        </div>
+        <button id="login-submit" class="button primary" type="submit">로그인</button>
+        <p class="fine-print desktop">회원가입 없이 두 사람의 계정만 이용할 수 있어요.</p>
+        <p class="fine-print mobile">두 사람의 사전 등록 계정만 이용할 수 있어요.</p>
+      </form>
+    </section>
+  </main>
+  <footer class="frame login-footer muted">
+    <p class="desktop">둘이 공유하는 장소 · 날짜별 계획 · 방문 전후의 기록</p>
+    <p class="mobile">로그인하면 함께 저장한 장소를 볼 수 있어요.</p>
+  </footer>
+</body>
+</html>
