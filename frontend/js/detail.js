@@ -1,4 +1,5 @@
 import {fetchJSON} from './api.js';
+import {createComments} from './comments.js';
 import {element, formatPlannedDate, placeFields, placeFormValues, showFieldErrors, tag} from './components.js';
 import {actionDialog, deletePlace, patchPlace} from './place-actions.js';
 import {requireUser, returnToLogin, sessionExpired} from './session.js';
@@ -17,15 +18,18 @@ const submit = byId('save-place');
 const formLatest = byId('edit-latest');
 const id = new URLSearchParams(window.location.search).get('id');
 let place;
+let comments;
 let busy = false;
 let editBase;
 const editFields = ['title', 'category', 'source_url', 'memo'];
 
 function updateControls() {
+  const locked = busy || Boolean(comments?.pending);
   article.setAttribute('aria-busy', String(busy));
-  for (const button of [edit, remove, visit]) button.disabled = busy || !place;
+  for (const button of [edit, remove, visit]) button.disabled = locked || !place;
   for (const control of form.elements) control.disabled = busy;
-  submit.disabled = busy || !place;
+  submit.disabled = locked || !place;
+  comments?.updateControls(busy);
 }
 
 function render() {
@@ -41,7 +45,18 @@ function render() {
 
 async function loadPlace() {
   try {
-    if (byId('account').hidden) await requireUser();
+    if (!comments) {
+      const user = await requireUser();
+      comments = createComments({
+        user, getPlace: () => place, reload: refreshDetail, onMissing: showMissing,
+        onPending: updateControls,
+        onExpired: () => {
+          place = undefined;
+          article.hidden = true;
+          byId('account').hidden = true;
+        },
+      });
+    }
     if (!/^[1-9]\d*$/.test(id || '') || Number(id) > 2147483647) {
       showMissing();
       return;
@@ -51,9 +66,13 @@ async function loadPlace() {
     return true;
   } catch (error) {
     place = undefined;
-    if (sessionExpired(error)) returnToLogin(true);
+    if (sessionExpired(error)) {
+      if (comments) comments.expire();
+      else returnToLogin(true);
+    }
     else if (error.status === 404) showMissing();
     else {
+      article.hidden = true;
       const retry = element('button', '다시 시도', 'button secondary');
       retry.addEventListener('click', start);
       status.setAttribute('role', 'alert');
@@ -63,8 +82,13 @@ async function loadPlace() {
   }
 }
 
+async function refreshDetail() {
+  return await loadPlace() && await comments.refresh();
+}
+
 function showMissing() {
   place = undefined;
+  comments?.missing();
   if (dialog.open) dialog.close();
   article.hidden = true;
   status.setAttribute('role', 'alert');
@@ -73,11 +97,14 @@ function showMissing() {
 }
 
 async function start() {
-  if (busy) return;
+  if (busy || comments?.pending) return;
   busy = true;
   updateControls();
   try {
-    if (await loadPlace() && dialog.open) showLatestInForm();
+    if (await loadPlace()) {
+      if (dialog.open) showLatestInForm();
+      await comments.refresh();
+    }
   } finally {
     busy = false;
     updateControls();
@@ -111,7 +138,7 @@ function showLatestInForm() {
 }
 
 async function change(action) {
-  if (busy || !place) return;
+  if (busy || comments?.pending || !place) return;
   busy = true;
   updateControls();
   feedback('');
@@ -123,6 +150,7 @@ async function change(action) {
     } else if (error.code === 'UPDATE_CONFLICT') {
       feedback(error.message, true);
       const refreshed = await loadPlace();
+      if (refreshed) await comments.refresh();
       if (dialog.open) {
         formError.textContent = error.message;
         if (refreshed) showLatestInForm();
@@ -132,6 +160,8 @@ async function change(action) {
         }
       }
     } else if (error.code === 'AFTER_COMMENTS_EXIST') {
+      await refreshDetail();
+      if (!place) return;
       await actionDialog({
         title: '미방문으로 변경할 수 없어요',
         description: '방문 후 코멘트가 남아 있어요. 각 작성자가 자신의 방문 후 기록을 먼저 삭제해야 미방문으로 바꿀 수 있어요.',
@@ -188,6 +218,7 @@ visit.addEventListener('click', async () => {
     ({place} = await patchPlace(current, {is_visited: !current.is_visited}));
     render();
     feedback(place.is_visited ? '방문 완료로 변경했어요.' : '미방문으로 변경했어요.');
+    await comments.refresh();
   });
   visit.focus();
 });

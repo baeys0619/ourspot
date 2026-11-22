@@ -89,7 +89,7 @@
 .skeleton span:nth-child(2) { width: min(280px, 70%); }
 
 .detail { padding-block: 42px; }
-.detail article { margin-top: 16px; }
+.detail > article { margin-top: 16px; }
 .detail .tags { margin: 8px 0 20px; }
 .detail-info { border-top: 1px solid var(--ourspot-border); padding-top: 20px; }
 .detail-info h2 { margin-bottom: 20px; font-size: 1.25rem; }
@@ -226,3 +226,42 @@
 }
 
 .selected-actions { display: grid; gap: 8px; }
+
+/* 장소 정보와 방문 전후 기록은 모바일에서 읽는 순서대로 쌓는다. */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 360fr) minmax(0, 728fr);
+  gap: 32px;
+}
+.comments { padding: 20px 18px 0 0; }
+.comments h2 { margin-bottom: 12px; font-size: 1.25rem; }
+.comments .feedback:not(:empty) { margin-bottom: 12px; }
+.comment-phase + .comment-phase { margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--ourspot-border); }
+.comment-phase-heading, .comment-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.comment-phase-heading { margin-bottom: 12px; }
+.comment-phase-heading h3 { margin: 0; font-size: 1.0625rem; }
+.comment-phase-heading p { font-size: .8125rem; }
+.comment-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.comment-card { padding: 16px; border: 1px solid var(--ourspot-border); border-radius: 9px; background: var(--ourspot-surface); }
+.comment-card.own { background: var(--ourspot-soft-purple); border-color: transparent; }
+.comment-card.empty, .comment-locked { background: var(--ourspot-background-muted); border-color: transparent; }
+.comment-card-heading { flex-wrap: wrap; font-size: .8125rem; }
+.comment-card-heading h4 { margin: 0; font-size: inherit; font-weight: 500; }
+.comment-card.own h4, #comment-author { color: var(--ourspot-primary); }
+.comment-actions { display: flex; flex-wrap: wrap; }
+.comment-actions button, .comment-permission { font-size: .75rem; }
+.comment-actions button { text-align: center; }
+.comment-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .875rem; margin-top: 8px; }
+.comment-locked { grid-column: 1 / -1; }
+.comment-locked p + p { margin-top: 6px; font-size: .8125rem; }
+#comment-phases > .fine-print { margin-top: 26px; }
+#comment-dialog { max-width: min(425px, calc(100% - 2 * var(--gutter))); }
+#comment-content { background: var(--ourspot-background-muted); }
+#comment-count { text-align: right; }
+
+@media (max-width: 767px) {
+  .detail-grid, .comment-cards { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .comments { padding: 0; }
+  .comment-card { padding: 13px; }
+  .comment-phase + .comment-phase { margin-top: 16px; }
+}

@@ -7,12 +7,14 @@ import socket
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from auth import check, run_isolated
 from frontend_phase2 import verify_place_management
+from frontend_phase3 import verify_comments_ui
 
 ELEMENT = 'element-6066-11e4-a52e-4f735466cecf'
 WIDTHS = (320, 390, 768, 1440)
@@ -68,7 +70,7 @@ class Browser:
         path = '/screenshot' if frame is None else f'/element/{frame}/screenshot'
         filename.write_bytes(base64.b64decode(self.command('GET', path)))
 
-    def responsive(self, path, screen, artifacts):
+    def responsive(self, path, screen, artifacts, inspect=None):
         # Firefox의 데스크톱 창 최소 너비(500px) 아래는 같은 출처 iframe의 viewport로 검증한다.
         for width in WIDTHS:
             if width >= 500:
@@ -76,6 +78,8 @@ class Browser:
                 self.open(path)
                 self.wait('ready at desktop width', 'return !!document.querySelector(arguments[0])?.offsetHeight;',
                           screen)
+                if inspect:
+                    inspect(width)
                 viewport = self.js('return [innerWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth];')
                 if width == 1440:
                     self.screenshot(artifacts / (screen[1:] + '-1440.png'))
@@ -91,6 +95,8 @@ class Browser:
                 ''', path, width)[ELEMENT]
                 self.command('POST', '/frame', {'id': {ELEMENT: frame}})
                 self.wait('ready at mobile width', 'return !!document.querySelector(arguments[0])?.offsetHeight;', screen)
+                if inspect:
+                    inspect(width)
                 viewport = self.js('return [innerWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth];')
                 self.command('POST', '/frame', {'id': None})
                 if width == 390:
@@ -248,6 +254,10 @@ def verify_frontend(browser, url, password_a, password_b, artifacts):
     check('account B sees account A’s registered place', browser.js(
         'return document.querySelector("#places").textContent.includes("사용자 A") && document.querySelector("#current-user").textContent === "사용자 B";'))
     verify_place_management(browser, url, password_a, password_b, artifacts, place_title, sign_in, wait_text)
+    with firefox(artifacts / 'partner-webdriver.log') as partner:
+        verify_comments_ui(browser, partner, url, password_a, artifacts)
+    browser.open(url + '/index.html')
+    wait_text('#current-user', '사용자 B')
     check('Redis session invalidated through the API', browser.command('POST', '/execute/async', {'script': '''
         const done = arguments[0];
         fetch('/api/auth/logout', {method: 'POST'}).then(response => done(response.status === 204));
@@ -262,16 +272,15 @@ def verify_frontend(browser, url, password_a, password_b, artifacts):
         'return location.pathname === "/login.html" && !document.querySelector("#plan-list");'))
 
 
-def main():
-    artifacts = Path(tempfile.mkdtemp(prefix='ourspot-frontend-browser-'))
-    print(f'검증 파일 {artifacts}', flush=True)
+@contextmanager
+def firefox(log_path):
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
         port = sock.getsockname()[1]
     args = ['geckodriver', '--host', '127.0.0.1', '--port', str(port), '--log', 'error']
     if profile_root := os.environ.get('OURSPOT_FIREFOX_PROFILE_ROOT'):
         args.extend(['--profile-root', profile_root])
-    with (artifacts / 'webdriver.log').open('w') as log:
+    with log_path.open('w') as log:
         driver = subprocess.Popen(args, stdout=log, stderr=log)
         driver_url = f'http://127.0.0.1:{port}'
         try:
@@ -285,13 +294,20 @@ def main():
                     time.sleep(.25)
             browser = Browser(driver_url)
             try:
-                run_isolated(front_image='ourspot-front:0.3', on_ready=lambda url, a, b:
-                             verify_frontend(browser, url, a, b, artifacts))
+                yield browser
             finally:
                 browser.command('DELETE', '')
         finally:
             driver.terminate()
             driver.wait(timeout=10)
+
+
+def main():
+    artifacts = Path(tempfile.mkdtemp(prefix='ourspot-frontend-browser-'))
+    print(f'검증 파일 {artifacts}', flush=True)
+    with firefox(artifacts / 'webdriver.log') as browser:
+        run_isolated(front_image='ourspot-front:0.4', on_ready=lambda url, a, b:
+                     verify_frontend(browser, url, a, b, artifacts))
 
 
 if __name__ == '__main__':

@@ -33,6 +33,7 @@ export async function requireUser() {
       if (sessionExpired(error)) returnToLogin(true);
     }
   });
+  return user;
 }
 
 window.addEventListener('pageshow', event => {

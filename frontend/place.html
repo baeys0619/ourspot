@@ -28,7 +28,7 @@
   <main class="frame detail" id="main" tabindex="-1">
     <a class="back-link" href="/index.html">‹ 장소 보관함<span class="desktop">으로</span></a>
     <p id="account-error" class="feedback error" role="alert"></p>
-    <p id="detail-status" role="status">장소를 불러오는 중…</p>
+    <p id="detail-status" role="status" tabindex="-1">장소를 불러오는 중…</p>
     <article id="place-detail" aria-busy="true" hidden>
       <div class="detail-heading">
         <div>
@@ -38,14 +38,41 @@
         <button id="toggle-visit" class="button primary" type="button" disabled>방문 완료로 변경</button>
       </div>
       <p id="detail-notice" class="feedback" role="status"></p>
-      <section class="detail-info" aria-labelledby="info-title">
-        <h2 id="info-title">장소 정보</h2>
-        <dl id="detail-fields" class="place-fields"></dl>
-        <div class="detail-actions">
-          <button id="edit-place" class="text-button accent" type="button" disabled>장소 정보 수정</button>
-          <button id="delete-place" class="text-button danger" type="button" disabled>장소 삭제</button>
-        </div>
-      </section>
+      <div class="detail-grid">
+        <section class="detail-info" aria-labelledby="info-title">
+          <h2 id="info-title">장소 정보</h2>
+          <dl id="detail-fields" class="place-fields"></dl>
+          <div class="detail-actions">
+            <button id="edit-place" class="text-button accent" type="button" disabled>장소 정보 수정</button>
+            <button id="delete-place" class="text-button danger" type="button" disabled>장소 삭제</button>
+          </div>
+        </section>
+        <section id="comments" class="comments" aria-labelledby="comments-title">
+          <h2 id="comments-title" tabindex="-1">둘의 기록</h2>
+          <p id="comments-notice" class="feedback" role="status"></p>
+          <div id="comments-state" class="feedback" hidden>
+            <p id="comments-status" role="status"></p>
+            <button id="retry-comments" class="button secondary" type="button" hidden>다시 시도</button>
+          </div>
+          <div id="comment-phases" hidden>
+            <section class="comment-phase" aria-labelledby="before-title">
+              <div class="comment-phase-heading">
+                <h3 id="before-title">방문 전</h3>
+                <p class="desktop muted">가기 전 기대했던 점</p>
+              </div>
+              <div id="before-comments" class="comment-cards"></div>
+            </section>
+            <section class="comment-phase" aria-labelledby="after-title">
+              <div class="comment-phase-heading">
+                <h3 id="after-title">방문 후</h3>
+                <p class="desktop muted">다녀온 뒤 남길 이야기</p>
+              </div>
+              <div id="after-comments" class="comment-cards"></div>
+            </section>
+            <p class="desktop fine-print">코멘트는 본인만 수정·삭제할 수 있어요.</p>
+          </div>
+        </section>
+      </div>
     </article>
   </main>
   <dialog id="place-dialog" aria-labelledby="save-title" aria-describedby="save-description">
@@ -83,6 +110,26 @@
       <div class="dialog-actions">
         <button type="button" id="cancel-save" class="button secondary">취소</button>
         <button type="submit" id="save-place" class="button primary">장소 저장</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="comment-dialog" aria-labelledby="comment-dialog-title">
+    <form id="comment-form" method="post" novalidate>
+      <h2 id="comment-dialog-title"></h2>
+      <p id="comment-author" class="accent"></p>
+      <p id="comment-error" class="feedback error" role="alert"></p>
+      <a id="comment-sign-in" href="/login.html?reason=expired" hidden>로그인 화면으로 이동</a>
+      <button id="retry-comment-editor" type="button" class="button secondary" hidden>최신 정보 다시 조회</button>
+      <div class="field">
+        <label for="comment-content">코멘트</label>
+        <textarea id="comment-content" name="content" rows="3" required autofocus
+          aria-describedby="comment-count comment-content-error"></textarea>
+        <p id="comment-count" class="fine-print"></p>
+        <p id="comment-content-error" class="field-error"></p>
+      </div>
+      <div class="dialog-actions">
+        <button id="cancel-comment" type="button" class="button secondary">취소</button>
+        <button id="save-comment" type="submit" class="button primary">저장</button>
       </div>
     </form>
   </dialog>
