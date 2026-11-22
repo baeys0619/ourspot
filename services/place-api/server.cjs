@@ -102,18 +102,21 @@ function registerRoutes(app, {db}) {
     rejectIdentityFields(req.body, req.query);
     requireEmptyQuery(req.query);
     const expected = requireExpectedTimestamp(req.body?.expected_updated_at);
-    const changes = validatePlaceFields(req.body, false);
+    const {planned_date: date, visit_order: order, ...changes} = validatePlaceFields(req.body, false);
     const id = requirePlaceId(req.params.id);
     const {coupleId} = req.session;
     const place = await withCoupleWrite(db, coupleId, async connection => {
       const current = await lockPlace(connection, coupleId, id, expected);
-      // 필드 이름은 검증된 네 가지 컬럼에서만 가져오고 값은 바인딩한다.
-      const fields = Object.keys(changes).filter(field => changes[field] !== current[field]);
-      if (fields.length > 0) {
-        const assignments = fields.map(field => `${field} = ?`).join(', ');
-        await connection.execute(
-          `UPDATE places SET ${assignments}, updated_at = ${advanceVersion} WHERE couple_id = ? AND id = ?`,
-          [...fields.map(field => changes[field]), coupleId, id]);
+      const fields = Object.fromEntries(Object.entries(changes).filter(([field, value]) => value !== current[field]));
+      const schedule = await planScheduleChange(connection, coupleId, current, {date, order, confirm: req.body.confirm_move});
+      if (schedule) {
+        fields.planned_date = schedule.date;
+        fields.visit_order = schedule.order;
+      }
+      // 기본 정보와 일정이 함께 바뀌어도 대상 장소의 버전은 한 번만 증가시킨다.
+      await updatePlace(connection, coupleId, id, fields);
+      if (schedule) {
+        for (const group of schedule.groups) await reindexDate(connection, coupleId, group, id);
       }
       return getPlace(connection, coupleId, id);
     });
@@ -132,14 +135,10 @@ function registerRoutes(app, {db}) {
     await withCoupleWrite(db, coupleId, async connection => {
       const current = await lockPlace(connection, coupleId, id, expected);
       const remaining = current.planned_date === null ? [] :
-        await lockDate(connection, coupleId, current.planned_date, id);
+        await lockScheduleRows(connection, coupleId, [current.planned_date], id);
       // FK가 코멘트를 함께 삭제한다. 일정에 있던 장소라면 남은 장소의 순서와 버전도 함께 갱신한다.
       await connection.execute('DELETE FROM places WHERE couple_id = ? AND id = ?', [coupleId, id]);
-      for (const [index, place] of remaining.entries()) {
-        await connection.execute(
-          `UPDATE places SET visit_order = ?, updated_at = ${advanceVersion} WHERE couple_id = ? AND id = ?`,
-          [index + 1, coupleId, place.id]);
-      }
+      await reindexDate(connection, coupleId, remaining, id);
     });
     res.status(204).end();
   }));
@@ -195,7 +194,7 @@ async function withCoupleWrite(db, coupleId, write) {
 
 async function lockPlace(connection, coupleId, id, expected) {
   const [[row]] = await connection.execute(
-    `SELECT title, category, source_url, memo, planned_date, updated_at
+    `SELECT id, title, category, source_url, memo, planned_date, visit_order, is_visited, updated_at
      FROM places WHERE couple_id = ? AND id = ? FOR UPDATE`, [coupleId, id]);
   if (!row) throw placeNotFound();
   const actual = asUtc(row.updated_at);
@@ -206,11 +205,75 @@ async function lockPlace(connection, coupleId, id, expected) {
   return row;
 }
 
-async function lockDate(connection, coupleId, date, deletedId) {
-  const [rows] = await connection.execute(
-    `SELECT id, visit_order FROM places WHERE couple_id = ? AND planned_date = ? AND id <> ?
-     ORDER BY id FOR UPDATE`, [coupleId, date, deletedId]);
+async function planScheduleChange(connection, coupleId, current, {date, order, confirm}) {
+  const originalDate = current.planned_date;
+  const targetDate = date === undefined ? originalDate : date;
+  const dateChanged = targetDate !== originalDate;
+  if (!dateChanged && (order === undefined || order === null)) return null;
+
+  if (dateChanged) {
+    if (typeof order === 'number') invalid({visit_order: '날짜 변경 후 방문 순서를 별도로 지정해 주세요.'});
+    if (targetDate !== null && current.is_visited) {
+      throw new PlaceRequestError(409, 'PLACE_ALREADY_VISITED', '방문한 장소는 새 날짜에 배정할 수 없어요.');
+    }
+    if (targetDate !== null && originalDate !== null && confirm !== true) {
+      throw new PlaceRequestError(409, 'DATE_CONFLICT', '다른 날짜로 이동할까요?', {details: {
+        current_planned_date: originalDate, requested_planned_date: targetDate,
+        current_updated_at: asUtc(current.updated_at),
+      }});
+    }
+  } else if (targetDate === null) {
+    invalid({visit_order: '날짜를 지정한 장소만 방문 순서를 바꿀 수 있어요.'});
+  }
+
+  const dates = [...new Set([originalDate, targetDate].filter(value => value !== null))];
+  const rows = await lockScheduleRows(connection, coupleId, dates, current.id);
+  const source = rows.filter(row => row.planned_date === originalDate);
+  if (!dateChanged) {
+    if (order > source.length + 1) invalid({visit_order: '해당 날짜의 방문 순서 범위를 확인해 주세요.'});
+    if (order === current.visit_order) return null;
+    source.splice(order - 1, 0, current);
+    return {date: targetDate, order, groups: [source]};
+  }
+
+  const destination = rows.filter(row => row.planned_date === targetDate);
+  return {date: targetDate, order: targetDate === null ? null : destination.length + 1,
+    groups: [source, destination]};
+}
+
+async function lockScheduleRows(connection, coupleId, dates, targetId) {
+  // 커플 잠금 이후 첫 일반 읽기로 ID만 구한다. 실제 검증과 정렬에는 각 행을 잠근 뒤 읽은 값을 쓴다.
+  // 날짜 인덱스의 방문 순서와 무관하게 두 날짜의 행을 합쳐 PK 오름차순으로 잠근다.
+  const placeholders = dates.map(() => '?').join(', ');
+  const [candidates] = await connection.execute(
+    `SELECT id FROM places WHERE couple_id = ? AND planned_date IN (${placeholders}) AND id <> ? ORDER BY id`,
+    [coupleId, ...dates, targetId]);
+  const rows = [];
+  for (const {id} of candidates) {
+    const [[row]] = await connection.execute(
+      'SELECT id, planned_date, visit_order FROM places WHERE id = ? AND couple_id = ? FOR UPDATE',
+      [id, coupleId]);
+    if (!row || !dates.includes(row.planned_date)) throw new Error('Schedule changed outside the couple lock');
+    rows.push(row);
+  }
   return rows.sort((a, b) => a.visit_order - b.visit_order || a.id - b.id);
+}
+
+async function reindexDate(connection, coupleId, rows, targetId) {
+  for (const [index, row] of rows.entries()) {
+    // 순서가 그대로인 행도 날짜 구성 변경을 알 수 있도록 버전을 갱신한다.
+    if (row.id !== targetId) await updatePlace(connection, coupleId, row.id, {visit_order: index + 1});
+  }
+}
+
+async function updatePlace(connection, coupleId, id, fields) {
+  const entries = Object.entries(fields);
+  if (entries.length === 0) return;
+  // 컬럼은 검증한 기본 필드와 서버가 계산한 일정 필드뿐이며, 모든 값은 바인딩한다.
+  const assignments = entries.map(([column]) => `${column} = ?`).join(', ');
+  await connection.execute(
+    `UPDATE places SET ${assignments}, updated_at = ${advanceVersion} WHERE couple_id = ? AND id = ?`,
+    [...entries.map(([, value]) => value), coupleId, id]);
 }
 
 start('place-api', base, registerRoutes).catch(() => {

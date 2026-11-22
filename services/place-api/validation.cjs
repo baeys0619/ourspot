@@ -2,6 +2,7 @@
 
 const categories = ['카페', '맛집', '놀거리', '기타'];
 const placeFields = ['title', 'category', 'source_url', 'memo'];
+const scheduleFields = ['planned_date', 'visit_order', 'confirm_move'];
 const identityFields = ['id', 'userId', 'user_id', 'coupleId', 'couple_id', 'addedBy', 'added_by', 'added_by_name'];
 
 class PlaceRequestError extends Error {
@@ -31,7 +32,7 @@ function validatePlaceFields(input, creating) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     invalid({body: 'JSON 객체를 입력해 주세요.'});
   }
-  const allowed = creating ? placeFields : [...placeFields, 'expected_updated_at'];
+  const allowed = creating ? placeFields : [...placeFields, ...scheduleFields, 'expected_updated_at'];
   const fieldErrors = Object.fromEntries(Object.keys(input)
     .filter(key => !allowed.includes(key))
     .map(key => [key, '지원하지 않는 필드예요.']));
@@ -64,11 +65,31 @@ function validatePlaceFields(input, creating) {
       fieldErrors.memo = '메모를 1000자 이하로 입력해 주세요.';
     }
   }
+  if (!creating) validateScheduleFields(input, values, fieldErrors);
   if (!creating && Object.keys(values).length === 0 && Object.keys(fieldErrors).length === 0) {
     fieldErrors.body = '변경할 장소 필드를 입력해 주세요.';
   }
   if (Object.keys(fieldErrors).length > 0) invalid(fieldErrors);
   return values;
+}
+
+// 현재 날짜와 일정 크기가 필요한 검사는 장소 버전을 확인한 트랜잭션 안에서 수행한다.
+function validateScheduleFields(input, values, fieldErrors) {
+  if (Object.hasOwn(input, 'planned_date')) {
+    if (input.planned_date === null || validDate(input.planned_date)) values.planned_date = input.planned_date;
+    else fieldErrors.planned_date = '실제 날짜를 YYYY-MM-DD 형식으로 입력해 주세요.';
+  }
+  if (Object.hasOwn(input, 'visit_order')) {
+    const {visit_order: order} = input;
+    if (input.planned_date === null ? order === null : Number.isSafeInteger(order) && order > 0) {
+      values.visit_order = order;
+    } else {
+      fieldErrors.visit_order = '방문 순서는 양의 정수이며, 일정 제외 시에는 null이어야 해요.';
+    }
+  }
+  if (Object.hasOwn(input, 'confirm_move') && typeof input.confirm_move !== 'boolean') {
+    fieldErrors.confirm_move = '이동 확인은 true 또는 false로 입력해 주세요.';
+  }
 }
 
 function validUrl(value) {

@@ -16,6 +16,7 @@ from urllib.parse import unquote
 from urllib.request import Request, urlopen
 
 from places import verify_places
+from schedules import verify_schedules
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGES = dict(line.split('=', 1) for line in (ROOT / 'infra/images.env').read_text().splitlines()
@@ -255,7 +256,9 @@ def verify(env_dir):
     other_cookie = other_couple_cookie()
     sets_before_places = redis_sets()
     verify_places(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, users)
-    check('Place CRUD does not rewrite authenticated Redis sessions', redis_sets() == sets_before_places)
+    verify_schedules(http, sql, check, is_error, other_cookie, a_cookie, b_cookie)
+    check('Place CRUD and schedule requests do not rewrite authenticated Redis sessions',
+          redis_sets() == sets_before_places)
     time.sleep(2)
     check('reads do not extend TTL', 0 < int(cache(a_id)[1]) < ttl_before)
     tampered = a_cookie[:-1] + ('x' if not a_cookie.endswith('x') else 'y')

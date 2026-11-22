@@ -98,10 +98,10 @@ def verify_places(http, sql, check, is_error, other_cookie, a_cookie, b_cookie, 
             patch(path, a_cookie, '2026-02-30T00:00:00.000Z', memo='값'), http(path, 'DELETE', a_cookie),
             delete(path, a_cookie, '2026-11-22T24:00:00.000Z'),
             http(path, 'DELETE', a_cookie, {}, headers={'X-Expected-Updated-At': version}))))
-    check('PATCH rejects empty changes, server timestamps and fields outside this phase', all(
+    check('PATCH rejects empty changes, server timestamps and invalid changes on an unscheduled place', all(
         is_error(patch(path, a_cookie, version, **form), 422, 'VALIDATION_ERROR') for form in (
             {}, {'updated_at': version}, {'visited_at': None}, {'is_visited': True},
-            {'planned_date': None}, {'visit_order': 1}, {'confirm_move': True})))
+            {'visit_order': None}, {'visit_order': 1}, {'confirm_move': True})))
 
     edited = patch(path, b_cookie, version, title='  공유 수정 ', category='기타', source_url=url, memo=' 메모 ')
     check('a partner can patch general fields while preserving author and creation time',
