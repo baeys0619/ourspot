@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>데이트 계획 · OURSPOT</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script type="module" src="/js/plans.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="site-header">
+    <div class="frame header-bar">
+      <a class="brand" href="/index.html">OURSPOT</a>
+      <nav aria-label="주요 메뉴">
+        <a href="/index.html"><span class="desktop">장소 보관함</span><span class="mobile">장소</span></a>
+        <a href="/plans.html" aria-current="page"><span class="desktop">데이트 계획</span><span class="mobile">계획</span></a>
+      </nav>
+      <div id="account" class="account" hidden>
+        <span id="current-user"></span>
+        <button type="button" id="logout" class="text-button">로그아웃</button>
+      </div>
+    </div>
+  </header>
+  <main class="frame plans" id="main" tabindex="-1">
+    <div class="plans-intro">
+      <div>
+        <h1><span class="desktop" id="plan-title-date">데이트 계획</span><span class="mobile">데이트 계획</span></h1>
+        <p class="muted"><span class="desktop">보관함에 저장한 장소를 날짜별로 배정하고 순서를 정해요.</span><span class="mobile">날짜를 선택하고 방문 순서를 정해요.</span></p>
+      </div>
+      <label class="field"><span class="desktop">날짜 선택</span><span class="mobile">날짜</span>
+        <input id="plan-date" type="date" required min="0001-01-01" max="9999-12-31" disabled>
+      </label>
+    </div>
+    <p id="account-error" class="feedback error" role="alert"></p>
+    <p id="plan-notice" class="feedback" role="status"></p>
+    <div id="plan-results" class="plans-grid" aria-busy="true">
+      <section aria-labelledby="plan-list-title">
+        <h2 id="plan-list-title" class="plan-list-title"><span class="mobile" id="plan-date-short"></span><span>방문할 곳</span> <span id="plan-count" hidden></span></h2>
+        <div id="plan-status" class="feedback" role="status">로그인 상태를 확인하는 중…</div>
+        <ol id="plan-list" class="plan-list"></ol>
+        <button id="open-candidates" type="button" class="button primary mobile" disabled>+ 보관함에서 장소 추가</button>
+        <p class="feedback plan-note"><span class="desktop">일정에서 제외하면 날짜 배정만 해제됩니다. 장소는 보관함에 남아요.</span><span class="mobile">일정에서 제외해도 장소는 보관함에 남아요.</span></p>
+      </section>
+      <div class="desktop" id="candidate-sidebar">
+        <section id="plan-candidates" class="plan-candidates" aria-labelledby="candidate-title">
+          <h2 id="candidate-title">보관함에서 추가</h2>
+          <p class="muted">아직 일정이 없는 장소를 골라주세요.</p>
+          <ul id="candidate-list" class="candidate-list"></ul>
+          <p class="muted">다른 날짜에 배정된 장소는 날짜 이동을 확인한 뒤 추가할 수 있어요.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog id="candidate-dialog" aria-labelledby="candidate-title">
+    <div id="candidate-dialog-body"></div>
+    <button id="close-candidates" type="button" class="button secondary">닫기</button>
+  </dialog>
+</body>
+</html>

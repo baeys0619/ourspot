@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from auth import check, run_isolated
+from frontend_phase2 import verify_place_management
 
 ELEMENT = 'element-6066-11e4-a52e-4f735466cecf'
 WIDTHS = (320, 390, 768, 1440)
@@ -233,7 +234,7 @@ def verify_frontend(browser, url, password_a, password_b, artifacts):
     '''))
     browser.click('#places .place-row a')
     wait_text('#detail-title', place_title)
-    check('mobile card opens standalone read-only detail', browser.js(
+    check('mobile card opens standalone place detail', browser.js(
         'return location.pathname === "/place.html" && document.querySelector("#detail-fields").textContent.includes("사용자 A");'))
     browser.command('POST', '/frame', {'id': None})
     browser.open(url + '/index.html')
@@ -246,6 +247,7 @@ def verify_frontend(browser, url, password_a, password_b, artifacts):
     wait_text('#places', place_title)
     check('account B sees account A’s registered place', browser.js(
         'return document.querySelector("#places").textContent.includes("사용자 A") && document.querySelector("#current-user").textContent === "사용자 B";'))
+    verify_place_management(browser, url, password_a, password_b, artifacts, place_title, sign_in, wait_text)
     check('Redis session invalidated through the API', browser.command('POST', '/execute/async', {'script': '''
         const done = arguments[0];
         fetch('/api/auth/logout', {method: 'POST'}).then(response => done(response.status === 204));
@@ -254,6 +256,10 @@ def verify_frontend(browser, url, password_a, password_b, artifacts):
     wait_text('#form-error', '로그인 세션이 만료됐어요.')
     check('protected API AUTH_REQUIRED clears place data and redirects', browser.js(
         'return location.search === "?reason=expired" && !document.querySelector("#places");'))
+    browser.open(url + '/plans.html')
+    wait_text('#form-error', '로그인 세션이 만료됐어요.')
+    check('anonymous direct plan access redirects to login', browser.js(
+        'return location.pathname === "/login.html" && !document.querySelector("#plan-list");'))
 
 
 def main():
@@ -279,7 +285,7 @@ def main():
                     time.sleep(.25)
             browser = Browser(driver_url)
             try:
-                run_isolated(front_image='ourspot-front:0.2', on_ready=lambda url, a, b:
+                run_isolated(front_image='ourspot-front:0.3', on_ready=lambda url, a, b:
                              verify_frontend(browser, url, a, b, artifacts))
             finally:
                 browser.command('DELETE', '')

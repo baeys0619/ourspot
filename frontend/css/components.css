@@ -17,10 +17,10 @@
   align-items: center;
   min-height: 44px;
   font-weight: 500;
+  color: var(--ourspot-text-secondary);
   text-decoration: none;
 }
 .header-bar nav a:hover, .back-link:hover, .text-button:hover:not(:disabled) { text-decoration: underline; }
-.nav-disabled { color: var(--ourspot-text-secondary); }
 #current-user { font-weight: 500; min-width: min(78px, 40%); }
 
 .button, .text-button {
@@ -131,3 +131,10 @@ dialog .field :is(input, select, textarea) { border-radius: 9px; }
   .account { font-size: .75rem; }
   .account #current-user { min-width: 0; }
 }
+
+.header-bar nav a[aria-current] { color: var(--ourspot-primary); }
+.text-button.accent { color: var(--ourspot-primary); }
+.text-button.danger, .button.danger { color: var(--ourspot-error); }
+.button.danger:hover:not(:disabled) { background: var(--ourspot-error-bg); }
+.action-dialog { max-width: min(425px, calc(100% - 2 * var(--gutter))); }
+.dialog-actions.single-action { grid-template-columns: 1fr; }

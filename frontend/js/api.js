@@ -5,11 +5,12 @@ export class ApiError extends Error {
     this.status = status;
     this.code = error.code;
     this.fieldErrors = error.fieldErrors;
+    this.details = error.details;
   }
 }
 
-export async function fetchJSON(path, {method = 'GET', body, signal} = {}) {
-  const headers = {Accept: 'application/json'};
+export async function fetchJSON(path, {method = 'GET', body, signal, headers: extraHeaders} = {}) {
+  const headers = {Accept: 'application/json', ...extraHeaders};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const response = await fetch(path, {
     method, headers, signal, credentials: 'include', cache: 'no-store',
@@ -20,7 +21,7 @@ export async function fetchJSON(path, {method = 'GET', body, signal} = {}) {
   // Nginx 자체 오류는 HTML일 수 있다. HTML과 내부 오류는 그대로 출력하지 않는다.
   const envelope = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError(response.status, response.status < 500 ? envelope?.error : undefined);
+    throw new ApiError(response.status, response.status < 500 ? envelope?.error : {code: envelope?.error?.code});
   }
   if (!envelope?.data) throw new ApiError(response.status);
   return envelope.data;

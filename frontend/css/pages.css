@@ -125,3 +125,104 @@
   /* 모바일 Safari에서 필드에 포커스할 때 자동 확대를 줄인다. */
   .field :is(input, select, textarea) { font-size: 1rem; }
 }
+
+/* 날짜별 계획은 넓은 화면에서 일정과 후보를 나란히, 작은 화면에서 후보를 대화상자에 표시한다. */
+.plans { padding-block: 62px; }
+.plans-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 30%);
+  align-items: end;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--ourspot-border);
+}
+.plans-intro h1 { font-size: 2rem; }
+.plans-intro p { margin-top: 6px; font-size: .875rem; }
+.plans-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.94fr) minmax(0, 1fr);
+  gap: 36px;
+  margin-top: 24px;
+}
+.plan-list-title { display: flex; align-items: center; gap: .25em; font-size: 1.25rem; margin-bottom: 14px; }
+#plan-count { margin-left: auto; font-size: .875rem; font-weight: 400; }
+.plan-list, .candidate-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.plan-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  min-height: 85px;
+  border: 1px solid var(--ourspot-border);
+  border-radius: 10px;
+}
+.plan-number { color: var(--ourspot-primary); font-size: 1.5rem; font-weight: 700; }
+.plan-place-link { color: inherit; font-weight: 700; text-decoration: none; }
+.plan-place-link:hover { text-decoration: underline; }
+.plan-place-meta { font-size: .75rem; margin-top: 3px; }
+.plan-place-info .tag { margin-top: 5px; }
+.plan-row-actions { display: flex; align-items: center; gap: 8px; font-size: .8125rem; }
+.plan-row-actions .text-button { margin-left: 12px; }
+.order-button { background: var(--ourspot-background-muted); min-width: 48px; }
+.order-button:disabled, .text-button:disabled { opacity: .55; }
+.plans #open-candidates { display: none; }
+.plan-note, #plan-status { margin-top: 12px; }
+.plan-note { font-size: .8125rem; }
+.plan-candidates { display: grid; gap: 14px; padding: 18px; border-radius: 10px; background: var(--ourspot-background-muted); }
+.plan-candidates h2 { font-size: 1.25rem; }
+.plan-candidates p { font-size: .8125rem; }
+.candidate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--ourspot-surface);
+}
+.candidate-row .candidate-title { font-size: .875rem; font-weight: 700; }
+.candidate-row button { font-size: .8125rem; }
+#candidate-dialog .plan-candidates { padding: 0; background: transparent; }
+#candidate-dialog .candidate-row { border: 1px solid var(--ourspot-border); }
+#close-candidates { margin-top: 16px; width: 100%; }
+.detail-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 25%);
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ourspot-border);
+}
+.detail .tags { margin: 8px 0 0; }
+.detail-info { width: min(100%, 345px); border-top: 0; }
+.detail-actions { display: grid; grid-template-columns: 1.35fr 1fr; margin-top: 18px; border-top: 1px solid var(--ourspot-border); }
+.detail-actions button { font-size: .8125rem; }
+#detail-notice:not(:empty), #plan-notice:not(:empty) { margin-top: 12px; }
+
+@media (max-width: 767px) {
+  .plans { padding-block: 38px; }
+  .plans-intro { grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 0; border: 0; }
+  .plans-intro h1 { font-size: 1.5625rem; }
+  .plans-intro p { margin-top: 14px; font-size: .8125rem; }
+  .plans-grid { display: block; margin-top: 16px; }
+  .plan-list-title { display: block; font-size: 1.125rem; padding-bottom: 14px; border-bottom: 1px solid var(--ourspot-border); }
+  #plan-count { font: inherit; }
+  .plan-list { gap: 16px; }
+  .plan-row { grid-template-columns: 40px minmax(0, 1fr); gap: 0 12px; padding: 14px 15px 2px; align-items: start; }
+  .plan-row-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1.35fr; }
+  .plan-row-actions .text-button { margin-left: 0; }
+  .order-button { justify-content: flex-start; padding: 0; color: var(--ourspot-primary); background: transparent; }
+  .order-button:disabled { background: transparent; border-color: transparent; }
+  .plans #open-candidates { display: inline-flex; width: 100%; margin-top: 16px; }
+  .plan-note { margin-top: 16px; }
+  .detail-heading { grid-template-columns: minmax(0, 1fr); padding-bottom: 16px; }
+  .detail .tags { gap: 6px; }
+  .detail .tags .tag { background: transparent; color: var(--ourspot-text-secondary); font-size: .8125rem; padding: 0; }
+  .detail .tags .tag + .tag::before { content: '·'; margin-right: 6px; }
+  .detail-info { width: 100%; }
+  .detail-info h2 { font-size: 1.125rem; }
+  .detail-actions { border-top: 0; border-bottom: 1px solid var(--ourspot-border); margin-top: 5px; }
+}
+
+.selected-actions { display: grid; gap: 8px; }

@@ -17,7 +17,7 @@
       <a class="brand" href="/index.html">OURSPOT</a>
       <nav aria-label="주요 메뉴">
         <a href="/index.html" aria-current="page"><span class="desktop">장소 보관함</span><span class="mobile">장소</span></a>
-        <span class="nav-disabled" aria-disabled="true"><span class="desktop">데이트 계획</span><span class="mobile">계획</span><span class="sr-only"> · 준비 중</span></span>
+        <a href="/plans.html"><span class="desktop">데이트 계획</span><span class="mobile">계획</span></a>
       </nav>
       <div id="account" class="account" hidden>
         <span id="current-user"></span>
@@ -34,6 +34,7 @@
       <button id="add-place" class="button primary" type="button" disabled>+ 장소 저장</button>
     </div>
     <p id="account-error" class="feedback error" role="alert"></p>
+    <p id="schedule-error" class="feedback error" role="alert"></p>
     <p id="save-status" class="feedback success" role="status"></p>
     <div class="library-toolbar" id="library-toolbar" hidden>
       <div class="filters" role="group" aria-label="방문 상태 필터">

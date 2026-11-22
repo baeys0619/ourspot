@@ -8,7 +8,7 @@ export function sessionExpired(error) {
 export function returnToLogin(expired = false) {
   document.getElementById('main')?.replaceChildren();
   document.getElementById('current-user')?.replaceChildren();
-  document.getElementById('place-dialog')?.remove();
+  for (const dialog of document.querySelectorAll('dialog')) dialog.remove();
   window.location.replace(expired ? '/login.html?reason=expired' : '/login.html');
 }
 

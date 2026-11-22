@@ -1,5 +1,6 @@
 import {fetchJSON} from './api.js';
-import {element, formatTimestamp, placeFields, placeStatus, setPending, showFieldErrors, tag, webUrl} from './components.js';
+import {element, formatPlannedDate, formatTimestamp, placeFields, placeFormValues, placeStatus, seoulDate, setPending, showFieldErrors, tag} from './components.js';
+import {actionDialog, assignDate} from './place-actions.js';
 import {requireUser, returnToLogin, sessionExpired} from './session.js';
 
 const byId = id => document.getElementById(id);
@@ -16,11 +17,13 @@ const submit = byId('save-place');
 const cancel = byId('cancel-save');
 const saveError = byId('save-error');
 const savedNotice = byId('save-status');
+const scheduleError = byId('schedule-error');
 const desktop = window.matchMedia('(min-width: 768px)');
 let status = 'unvisited';
 let selectedId;
 let request;
 let noticeTimer;
+let assigning = false;
 
 function showMessage(title = '', description = '', action, error = false) {
   message.replaceChildren();
@@ -52,8 +55,46 @@ function renderSelected(place) {
   const detail = element('a', '장소 상세 보기', 'button secondary');
   detail.href = '/place.html?id=' + place.id;
 
-  selection.replaceChildren(element('p', '선택한 장소', 'muted'), element('h2', place.title), tags, fields, detail);
+  const actions = element('div', undefined, 'selected-actions');
+  if (place.planned_date) {
+    const plan = element('a', formatPlannedDate(place.planned_date) + ' 일정 보기', 'button primary');
+    plan.href = '/plans.html?' + new URLSearchParams({date: place.planned_date});
+    actions.append(plan);
+  } else if (!place.is_visited) {
+    actions.append(actionButton('일정에 추가', event => addToSchedule(place, event.currentTarget), 'primary'));
+  }
+  actions.append(detail);
+  selection.replaceChildren(element('p', '선택한 장소', 'muted'), element('h2', place.title), tags, fields, actions);
   selection.hidden = false;
+}
+
+async function addToSchedule(place, button) {
+  if (assigning) return;
+  assigning = true;
+  scheduleError.textContent = '';
+  try {
+    const date = await actionDialog({
+      title: '일정에 추가', description: place.title + '을(를) 방문할 날짜를 정해 주세요.',
+      date: seoulDate(), confirm: '추가하기',
+    });
+    if (!date) return;
+    button.disabled = true;
+    if (await assignDate(place, date)) {
+      savedNotice.textContent = '일정을 저장했어요.';
+      await loadPlaces();
+      selection.querySelector('a[href^="/plans.html"]')?.focus();
+    }
+  } catch (error) {
+    if (sessionExpired(error)) returnToLogin(true);
+    else {
+      scheduleError.textContent = error.status < 500 ? error.message : '일정을 저장하지 못했어요. 다시 시도해 주세요.';
+      if (['UPDATE_CONFLICT', 'PLACE_ALREADY_VISITED', 'NOT_FOUND'].includes(error.code)) await loadPlaces();
+    }
+  } finally {
+    assigning = false;
+    button.disabled = false;
+    if (button.isConnected) button.focus();
+  }
 }
 
 function renderPlaces({places, counts}) {
@@ -164,17 +205,8 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submit.disabled) return;
 
-  const fields = new FormData(form);
-  const title = String(fields.get('title')).trim();
-  const category = String(fields.get('category'));
-  const source = String(fields.get('source_url')).trim();
-  const memo = String(fields.get('memo'));
-  const errors = {};
+  const {values, errors} = placeFormValues(form);
   saveError.textContent = '';
-  if (!title || [...title].length > 120) errors.title = '장소 이름을 1~120자로 입력해 주세요.';
-  if (!category) errors.category = '카테고리를 선택해 주세요.';
-  if (source && !webUrl(source)) errors.source_url = '2048자 이하의 HTTP 또는 HTTPS URL을 입력해 주세요.';
-  if ([...memo].length > 1000) errors.memo = '메모를 1000자 이하로 입력해 주세요.';
   showFieldErrors(form, errors);
   if (Object.keys(errors).length) return;
 
@@ -184,7 +216,7 @@ form.addEventListener('submit', async event => {
   let failure;
   try {
     const {place} = await fetchJSON('/api/places', {
-      method: 'POST', body: {title, category, source_url: source || null, memo: memo.trim() ? memo : null},
+      method: 'POST', body: values,
     });
     dialog.close();
     savedNotice.textContent = '저장했어요.';
@@ -214,6 +246,10 @@ form.addEventListener('submit', async event => {
 async function start() {
   try {
     await requireUser();
+    if (new URLSearchParams(location.search).get('notice') === 'place-deleted') {
+      savedNotice.textContent = '장소를 삭제했어요.';
+      history.replaceState(null, '', '/index.html');
+    }
     byId('library-toolbar').hidden = false;
     addPlace.disabled = false;
     loadPlaces();

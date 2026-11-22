@@ -347,6 +347,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preview', action='store_true', help='격리 미리보기를 열고 종료 신호까지 유지')
     parser.add_argument('--port', type=int, default=8180, help='격리 미리보기의 Ubuntu 루프백 포트')
+    parser.add_argument('--front-image', default='ourspot-front:0.3', help='격리 미리보기용 로컬 Frontend 이미지')
     args = parser.parse_args()
     if args.preview:
         if not 1024 <= args.port <= 65535:
@@ -358,7 +359,7 @@ if __name__ == '__main__':
         if passwords[0] == passwords[1] or any(not 1 <= len(password.encode()) <= 72 for password in passwords):
             parser.error('서로 다른 UTF-8 1~72바이트 비밀번호를 입력해야 합니다.')
         try:
-            run_isolated(on_ready=hold_preview, passwords=passwords, front_image='ourspot-front:0.2', port=args.port)
+            run_isolated(on_ready=hold_preview, passwords=passwords, front_image=args.front_image, port=args.port)
         except KeyboardInterrupt:
             pass
     else:
