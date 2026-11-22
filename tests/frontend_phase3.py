@@ -205,6 +205,8 @@ def verify_comments_ui(browser, partner, url, password_a, artifacts):
     ready(partner)
     check('A sees B’s edited after and can only edit their own', 'B의 수정된 방문 후' in visible_text(partner, 'after') and
           partner.js('return !document.querySelector("#after-comments .comment-card:not(.own) button");'))
+    partner.command('POST', '/window/rect', {'width': 1440, 'height': 950})
+    partner.screenshot(artifacts / 'comments-visited-1440.png')
     remove(partner, 'after')
     partner.click('#toggle-visit')
     wait_text(partner, '#action-description', '각 작성자')
@@ -247,6 +249,52 @@ def verify_comments_ui(browser, partner, url, password_a, artifacts):
     ready(browser)
     check('retry restores latest visit and before records', 'B의 새 방문 전' in visible_text(browser, 'before') and
           '미방문으로 변경' in browser.js('return document.querySelector("#toggle-visit").textContent;'))
+    browser.click('#toggle-visit')
+    ready(browser)
+
+    # B의 장소 응답과 코멘트 응답 사이에 A가 방문 상태를 뒤집는다.
+    browser.js('''
+        const original = window.fetch;
+        window.fetch = (path, options) => {
+            if (options.method === 'GET' && path.endsWith('/comments')) {
+                window.fetch = original;
+                return new Promise(resolve => { window.readComments = () => resolve(original(path, options)); });
+            }
+            return original(path, options);
+        };
+    ''')
+    browser.click('#toggle-visit')
+    browser.wait('B is waiting for comments after a visit', 'return typeof window.readComments === "function";')
+    visited = api(partner, endpoint, 'GET')['data']['place']
+    api(partner, endpoint, 'PATCH', {'is_visited': False, 'expected_updated_at': visited['updated_at']})
+    browser.js('window.readComments();')
+    ready(browser)
+    check('a visit change between reads refreshes the place and both comment phases', browser.js('''
+        return document.querySelector('#toggle-visit').textContent === '방문 완료로 변경' &&
+            document.querySelector('#detail-notice').textContent.includes('최신 상태') &&
+            Boolean(document.querySelector('#before-comments button')) &&
+            !document.querySelector('#after-comments button');
+    '''))
+
+    # PATCH는 실제로 적용하되 응답이 도착하지 않은 상황을 재현한다.
+    browser.js('''
+        const original = window.fetch;
+        window.fetch = (path, options) => {
+            if (options.method === 'PATCH' && path === arguments[0]) {
+                window.fetch = original;
+                return original(path, options).then(() => { throw new TypeError('isolated connection lost'); });
+            }
+            return original(path, options);
+        };
+    ''', endpoint)
+    browser.click('#toggle-visit')
+    wait_text(browser, '#detail-notice', '최신 상태를 다시 불러왔어요.')
+    ready(browser)
+    check('a lost visit response refreshes the committed state and locks before editing', browser.js('''
+        return document.querySelector('#toggle-visit').textContent === '미방문으로 변경' &&
+            !document.querySelector('#before-comments button') &&
+            Boolean(document.querySelector('#after-comments button'));
+    '''))
     browser.click('#toggle-visit')
     ready(browser)
 

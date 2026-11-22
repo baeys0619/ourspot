@@ -7,7 +7,7 @@ const phaseNames = {before: '방문 전', after: '방문 후'};
 const limit = 1000;
 const contentError = '코멘트를 1~1000자로 입력해 주세요.';
 
-export function createComments({user, getPlace, reload, onMissing, onExpired, onPending}) {
+export function createComments({user, getPlace, loadPlace, reload, onMissing, onExpired, onPending}) {
   const byId = id => document.getElementById(id);
   const section = byId('comments');
   const state = byId('comments-state');
@@ -168,10 +168,21 @@ export function createComments({user, getPlace, reload, onMissing, onExpired, on
     showState('코멘트를 불러오는 중…');
     onPending();
     try {
-      ({comments: records} = await fetchJSON(endpoint()));
-      ready = true;
-      state.hidden = true;
-      render();
+      // 장소와 코멘트는 별도 GET이다. 중간에 장소가 바뀌면 새 장소 버전으로 다시 조회해
+      // 이전 방문 상태와 새 코멘트가 섞인 화면을 표시하지 않는다.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const version = getPlace().updated_at;
+        const snapshot = await fetchJSON(endpoint());
+        if (!(await loadPlace())) return false;
+        if (getPlace().updated_at === version) {
+          records = snapshot.comments;
+          ready = true;
+          state.hidden = true;
+          render();
+          return true;
+        }
+      }
+      showState('조회하는 동안 장소가 변경됐어요. 다시 시도해 주세요.', true);
     } catch (failure) {
       ready = false;
       if (failure.status === 401) expire();

@@ -48,7 +48,7 @@ async function loadPlace() {
     if (!comments) {
       const user = await requireUser();
       comments = createComments({
-        user, getPlace: () => place, reload: refreshDetail, onMissing: showMissing,
+        user, getPlace: () => place, loadPlace, reload: refreshDetail, onMissing: showMissing,
         onPending: updateControls,
         onExpired: () => {
           place = undefined;
@@ -101,10 +101,8 @@ async function start() {
   busy = true;
   updateControls();
   try {
-    if (await loadPlace()) {
-      if (dialog.open) showLatestInForm();
-      await comments.refresh();
-    }
+    await refreshDetail();
+    if (place && dialog.open) showLatestInForm();
   } finally {
     busy = false;
     updateControls();
@@ -137,7 +135,7 @@ function showLatestInForm() {
   formLatest.hidden = false;
 }
 
-async function change(action) {
+async function change(action, {refreshOnUncertainResult = false} = {}) {
   if (busy || comments?.pending || !place) return;
   busy = true;
   updateControls();
@@ -149,12 +147,11 @@ async function change(action) {
       returnToLogin(true);
     } else if (error.code === 'UPDATE_CONFLICT') {
       feedback(error.message, true);
-      const refreshed = await loadPlace();
-      if (refreshed) await comments.refresh();
+      await refreshDetail();
       if (dialog.open) {
         formError.textContent = error.message;
-        if (refreshed) showLatestInForm();
-        else if (!place) {
+        if (place) showLatestInForm();
+        else {
           formError.append(' 최신 정보를 다시 불러와 주세요. ',
             Object.assign(element('button', '다시 시도', 'text-button'), {type: 'button', onclick: start}));
         }
@@ -169,6 +166,13 @@ async function change(action) {
       });
     } else if (error.status === 404) {
       showMissing();
+    } else if (refreshOnUncertainResult && (!error.status || error.status >= 500)) {
+      const wasVisited = place.is_visited;
+      const refreshed = await refreshDetail();
+      if (!refreshed) feedback('방문 상태 변경을 확인하지 못했어요. 다시 시도해 주세요.', true);
+      else feedback(place.is_visited !== wasVisited ?
+        '방문 상태 변경 응답을 확인하지 못해 최신 상태를 다시 불러왔어요.' :
+        '방문 상태를 변경하지 못했어요. 다시 시도해 주세요.', true);
     } else if (dialog.open) {
       formError.textContent = error.status < 500 ? error.message : '저장하지 못했어요. 다시 시도해 주세요.';
       return error.fieldErrors;
@@ -216,10 +220,14 @@ form.addEventListener('submit', async event => {
 visit.addEventListener('click', async () => {
   await change(async current => {
     ({place} = await patchPlace(current, {is_visited: !current.is_visited}));
+    const applied = place.is_visited;
     render();
-    feedback(place.is_visited ? '방문 완료로 변경했어요.' : '미방문으로 변경했어요.');
     await comments.refresh();
-  });
+    if (place) {
+      feedback(place.is_visited !== applied ? '방문 상태가 다시 변경되어 최신 상태를 표시했어요.' :
+        applied ? '방문 완료로 변경했어요.' : '미방문으로 변경했어요.');
+    }
+  }, {refreshOnUncertainResult: true});
   visit.focus();
 });
 
