@@ -3,8 +3,9 @@
 import subprocess
 from pathlib import Path
 images = {'NODE_BASE':'node:22-bookworm-slim', 'FRONT_BASE':'httpd:2.4-bookworm', 'NGINX_IMAGE':'nginx:1.28-bookworm', 'MYSQL_IMAGE':'mysql:8.4', 'REDIS_IMAGE':'redis:7.4-bookworm'}
-lines = ['# Actual official image digests verified on this ARM64 host.']
+path = Path('infra/images.env')
+existing = path.read_text().splitlines()
 for key, tag in images.items():
     digest = subprocess.check_output(['docker','image','inspect',tag,'--format','{{index .RepoDigests 0}}'], text=True).strip()
-    lines.append(f'{key}={digest}')
-Path('infra/images.env').write_text('\n'.join(lines) + '\n')
+    existing = [f'{key}={digest}' if line.startswith(f'{key}=') else line for line in existing]
+path.write_text('\n'.join(existing) + '\n')

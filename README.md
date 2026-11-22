@@ -36,22 +36,22 @@ https://www.figma.com/design/RJUp9mnBERMYSg2rnpR6GO/
 - [x] Docker 컨테이너 6개 구성
 - [x] Redis 세션 공유 구현
 - [x] 웹 서비스 개발
-- [ ] Docker Hub 배포
+- [x] Docker Hub Public AMD64 앱 이미지 3개 게시
 - [x] 운영 Docker 인프라 및 격리 MySQL 영속성 검증
-- [ ] 게시 이미지로 ARM64 독립 설치 및 백업·복원 검증
+- [x] Ubuntu ARM64 격리 환경에서 게시 이미지 실행(QEMU) 및 백업·복원 검증
+- [ ] 네이티브 AMD64 호스트에서 게시 이미지로 설치 검증
 - [ ] 최종 보고서·구성도·시연 영상 및 제출
 
 운영 컨테이너, Redis 세션 공유, MySQL Volume Mount와 격리 재시작·재생성의 증빙은
 [제출 증빙 체크리스트](docs/verification/evidence-checklist.md)에서 확인할 수 있다.
+Docker Hub 이미지 설치, AMD64 소스 빌드, 격리 검증과 시연 순서는
+[최종 설치 가이드](docs/verification/installation.md)에 있다.
 
 ## 인증 빌드와 격리 테스트
 
 ```bash
 bash scripts/build.sh
-source infra/images.env
-docker build --build-arg "NODE_BASE=$NODE_BASE" --build-arg SERVICE=place-api \
-  -f services/Dockerfile -t ourspot-place-api:stage5-test .
-OURSPOT_PLACE_TEST_IMAGE=ourspot-place-api:stage5-test python3 tests/auth.py
+OURSPOT_PLACE_TEST_IMAGE=ourspot-place-api:0.6 python3 tests/auth.py
 ```
 
 `tests/auth.py`는 별도 Docker 네트워크, 임시 MySQL·Redis, 임의 루프백 포트에
