@@ -32,12 +32,17 @@ https://www.figma.com/design/RJUp9mnBERMYSg2rnpR6GO/
 - [x] OURSPOT 전용 Ubuntu 환경 구축
 - [x] VS Code Remote - SSH 연결
 - [x] 기존 Docker 실습 환경 정리
-- [ ] 프로젝트 구조 및 Git 초기화
-- [ ] Docker 컨테이너 6개 구성
-- [ ] Redis 세션 공유 구현
-- [ ] 웹 서비스 개발
+- [x] 프로젝트 구조 및 Git 초기화
+- [x] Docker 컨테이너 6개 구성
+- [x] Redis 세션 공유 구현
+- [x] 웹 서비스 개발
 - [ ] Docker Hub 배포
-- [ ] 최종 검증 및 제출
+- [x] 운영 Docker 인프라 및 격리 MySQL 영속성 검증
+- [ ] 게시 이미지로 ARM64 독립 설치 및 백업·복원 검증
+- [ ] 최종 보고서·구성도·시연 영상 및 제출
+
+운영 컨테이너, Redis 세션 공유, MySQL Volume Mount와 격리 재시작·재생성의 증빙은
+[제출 증빙 체크리스트](docs/verification/evidence-checklist.md)에서 확인할 수 있다.
 
 ## 인증 빌드와 격리 테스트
 
