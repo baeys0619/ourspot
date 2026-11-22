@@ -61,6 +61,7 @@ def verify(email, password):
         key = b'ourspot:sess:' + signed[1].encode('ascii')
         ttl = int(redis('-x', 'TTL', key=key))
         require(0 < ttl <= 86400, f'Redis session TTL: {ttl}s')
+        # 한 번 로그인해 받은 쿠키를 두 API에 그대로 보낸다. 쿠키 없이 거부되는 경로가 각각 같은 세션으로 열리는지 확인한다.
         status, _, body = request('/api/auth/me', cookie=cookie)
         login_user = json.loads(login_body)['data']['user']
         require(status == 200 and json.loads(body)['data']['user'] == login_user,

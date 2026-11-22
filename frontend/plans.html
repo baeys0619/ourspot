@@ -37,10 +37,12 @@
     </div>
     <p id="account-error" class="feedback error" role="alert"></p>
     <p id="plan-notice" class="feedback" role="status"></p>
+    <!-- 날짜 선택에 따라 방문 순서 목록과 추가 후보를 함께 갱신한다. -->
     <div id="plan-results" class="plans-grid" aria-busy="true">
       <section aria-labelledby="plan-list-title">
         <h2 id="plan-list-title" class="plan-list-title"><span class="mobile" id="plan-date-short"></span><span>방문할 곳</span> <span id="plan-count" hidden></span></h2>
         <div id="plan-status" class="feedback" role="status">로그인 상태를 확인하는 중…</div>
+        <!-- 받은 방문 순서대로 장소를 표시한다. 순서 변경과 제외 버튼은 plans.js가 각 행에 붙인다. -->
         <ol id="plan-list" class="plan-list"></ol>
         <button id="open-candidates" type="button" class="button primary mobile" disabled>+ 보관함에서 장소 추가</button>
         <p class="feedback plan-note"><span class="desktop">일정에서 제외하면 날짜 배정만 해제됩니다. 장소는 보관함에 남아요.</span><span class="mobile">일정에서 제외해도 장소는 보관함에 남아요.</span></p>
@@ -55,6 +57,7 @@
       </div>
     </div>
   </main>
+  <!-- 작은 화면에서는 plans.js가 오른쪽 후보 영역을 이 모달로 옮긴다. -->
   <dialog id="candidate-dialog" aria-labelledby="candidate-title">
     <div id="candidate-dialog-body"></div>
     <button id="close-candidates" type="button" class="button secondary">닫기</button>

@@ -28,6 +28,7 @@
       <h2 id="login-title" class="desktop">로그인</h2>
       <p class="desktop muted login-lead">미리 등록된 계정으로 로그인해 주세요.</p>
       <p id="session-status" role="status">로그인 상태를 확인하는 중…</p>
+      <!-- 기존 세션 확인이 끝날 때까지 폼을 숨긴다. login.js가 폼 제출을 받아 요청을 보내고, 입력 오류는 각 입력란 아래에 표시한다. -->
       <form id="login-form" method="post" novalidate hidden>
         <p id="form-error" class="feedback error" role="alert"></p>
         <div class="field">

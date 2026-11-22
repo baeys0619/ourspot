@@ -41,6 +41,7 @@ function actionButton(label, action, style = 'secondary') {
   return button;
 }
 
+// 선택한 행과 오른쪽 상세 영역을 함께 갱신한다. 예정일이 있으면 그 일정으로 연결하고, 미방문·미배정 장소에는 추가 버튼을 표시한다.
 function renderSelected(place) {
   selectedId = place.id;
   for (const link of list.querySelectorAll('a')) {
@@ -68,6 +69,7 @@ function renderSelected(place) {
   selection.hidden = false;
 }
 
+// 선택한 장소에 날짜를 배정한다. 화면에 남은 정보가 최신 상태와 어긋난 경우 보관함을 다시 불러온다.
 async function addToSchedule(place, button) {
   if (assigning) return;
   assigning = true;
@@ -97,6 +99,7 @@ async function addToSchedule(place, button) {
   }
 }
 
+// 탭의 건수는 커플 전체 기준이다. 현재 탭이 비어 있는 경우와 보관함 전체가 비어 있는 경우의 안내를 구분한다.
 function renderPlaces({places, counts}) {
   byId('unvisited-count').textContent = counts.unvisited;
   byId('visited-count').textContent = counts.visited;
@@ -140,7 +143,7 @@ function renderPlaces({places, counts}) {
 }
 
 async function loadPlaces() {
-  // 빠른 필터 전환에서 늦게 도착한 응답이 현재 탭을 덮지 않도록 이전 요청을 취소한다.
+  // 탭이나 정렬이 바뀌면 진행 중이던 목록 요청을 취소한다.
   request?.abort();
   const controller = new AbortController();
   request = controller;
@@ -153,10 +156,12 @@ async function loadPlaces() {
   skeleton.append(element('span'), element('span'), element('span'));
   showMessage('장소를 불러오는 중…', '', skeleton);
 
+  // 서버가 방문 상태를 필터링한다. 오래된 순을 선택했을 때만 sort를 보내고, 최근 순은 API의 기본값을 쓴다.
   const query = new URLSearchParams({status});
   if (sort.value === 'oldest') query.set('sort', sort.value);
   try {
     const data = await fetchJSON('/api/places?' + query, {signal: controller.signal});
+    // 응답, 오류, 로딩 종료 모두 현재 요청에만 반영한다. 취소 시점에 이전 응답 처리가 시작됐을 수 있다.
     if (request === controller) renderPlaces(data);
   } catch (error) {
     if (request !== controller) return;
@@ -168,6 +173,7 @@ async function loadPlaces() {
   }
 }
 
+// 탭을 바꿀 때 미방문은 오래된 순, 방문 완료는 최근 순으로 정렬 기본값을 되돌린다.
 function activateFilter(button, nextSelection) {
   status = button.dataset.status;
   selectedId = nextSelection;
@@ -183,6 +189,7 @@ for (const filter of filters) {
 }
 sort.addEventListener('change', loadPlaces);
 
+// 등록창을 새로 열 때는 지난 입력과 오류를 지운다. 요청에 실패해서 창이 계속 열려 있을 때는 입력이 그대로 남는다.
 function openForm() {
   if (dialog.open) return;
   form.reset();
@@ -211,6 +218,7 @@ form.addEventListener('submit', async event => {
   if (Object.keys(errors).length) return;
 
   setPending(submit, true, '장소 저장', '저장 중…');
+  // 전송할 값을 읽은 뒤 입력과 취소를 잠근다. 저장 중에 폼이 바뀌거나 같은 요청이 다시 나가는 일을 막는다.
   const inputs = form.querySelectorAll('input, select, textarea, #cancel-save');
   for (const input of inputs) input.disabled = true;
   let failure;
@@ -222,6 +230,7 @@ form.addEventListener('submit', async event => {
     savedNotice.textContent = '저장했어요.';
     clearTimeout(noticeTimer);
     noticeTimer = setTimeout(() => { savedNotice.textContent = ''; }, 3000);
+    // 새 장소는 미방문으로 생성된다. 성공 후 미방문 목록을 조회해 방금 저장한 장소를 선택한다.
     if (status !== 'unvisited') activateFilter(filters[0], place.id);
     else {
       selectedId = place.id;
@@ -233,6 +242,7 @@ form.addEventListener('submit', async event => {
     for (const input of inputs) input.disabled = false;
     setPending(submit, false, '장소 저장', '저장 중…');
   }
+  // 실패하면 모달을 유지하고 서버에서 돌려준 필드 오류를 표시한다. 인증이 만료된 경우에만 보호 화면을 비우고 이동한다.
   if (!failure) return;
   if (sessionExpired(failure)) {
     returnToLogin(true);

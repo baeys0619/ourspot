@@ -8,12 +8,15 @@ export function patchPlace(place, changes) {
   });
 }
 
+// 삭제에는 본문을 보내지 않는다. 화면에서 본 장소의 버전은 요청 헤더에 넣는다.
 export function deletePlace(place) {
   return fetchJSON('/api/places/' + place.id, {
     method: 'DELETE', headers: {'X-Expected-Updated-At': place.updated_at},
   });
 }
 
+// 확인만 필요한 창과 날짜 선택이 필요한 창을 함께 사용한다.
+// 창이 닫힐 때 확인 여부 또는 선택한 날짜를 돌려주고 기존 위치로 포커스를 옮긴다.
 export function actionDialog({title, description, confirm, style = 'primary', cancel = true, date}) {
   const previous = document.activeElement;
   const dialog = element('dialog', undefined, 'action-dialog');
@@ -66,10 +69,12 @@ export function actionDialog({title, description, confirm, style = 'primary', ca
   });
 }
 
+// 날짜 배정은 먼저 일반 수정으로 요청한다. 서버가 기존 날짜에서의 이동 확인을 요구할 때만 확인창을 연다.
 export async function assignDate(place, date) {
   try {
     return await patchPlace(place, {planned_date: date});
   } catch (error) {
+    // 버전 충돌은 호출한 화면에 전달한다. DATE_CONFLICT만 사용자의 확인을 받아 날짜 이동으로 이어 간다.
     if (error.code !== 'DATE_CONFLICT') throw error;
     const {current_planned_date, requested_planned_date, current_updated_at} = error.details;
     const confirmed = await actionDialog({

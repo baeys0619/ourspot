@@ -7,6 +7,7 @@ source infra/images.env
 prefix=${OURSPOT_INSTALL_PREFIX:-ourspot}
 runtime=${OURSPOT_RUNTIME_DIR:-.runtime}
 image=${OURSPOT_USER_IMAGE:-$USER_LOCAL}
+# 초기화 작업은 User API 이미지를 빌려 같은 네트워크와 DB 설정에서 실행한다. API 서버 대신 seed-users.cjs를 실행한다.
 run_seed=(docker run --pull=never --network "$prefix-net" --env-file "$runtime/api.env")
 seed_command=("$image" node seed-users.cjs)
 if [[ -n "${OURSPOT_QEMU:-}" ]]; then
@@ -25,6 +26,7 @@ run_seed_job() {
     "${run_seed[@]}" --name "$prefix-seed-$job-$$" "$@"
   fi
 }
+# 기존 계정이 준비됐으면 비밀번호를 묻지 않는다. 지정한 두 계정과 다른 상태라면 그대로 두고 중단한다.
 state=$(run_seed_job check "${seed_command[@]}" --check)
 case "$state" in
   ready) printf '%s\n' 'Initial accounts already installed.'; exit 0 ;;
@@ -33,6 +35,7 @@ case "$state" in
 esac
 
 printf '%s\n' 'Enter two different passwords, each 1–72 UTF-8 bytes.' >&2
+# 터미널에 비밀번호를 표시하지 않고 두 번 입력받아 일치하는지 확인한다. 길이와 두 계정의 값이 다른지는 Node 초기화 코드에서 검사한다.
 read_password() {
   local email="$1" target="$2" entered confirmed
   IFS= read -r -s -p "$email password: " entered </dev/tty

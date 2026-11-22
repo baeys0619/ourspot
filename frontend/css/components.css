@@ -76,6 +76,7 @@ button:disabled { cursor: default; }
 .feedback { padding: 14px 16px; border-radius: 10px; background: var(--ourspot-background-muted); font-size: .875rem; }
 .feedback.error { background: var(--ourspot-error-bg); color: var(--ourspot-error); }
 .feedback.success { background: var(--ourspot-soft-purple); color: var(--ourspot-success); }
+/* 내용이 없는 안내 요소는 자리만 접는다. 스크립트가 메시지를 채우면 다시 본문에 표시된다. */
 [role="alert"]:empty, [role="status"]:empty {
   position: absolute;
   width: 1px;
@@ -89,6 +90,7 @@ button:disabled { cursor: default; }
 .feedback h2 { font-size: 1rem; }
 .feedback :is(p, button) { margin-top: 6px; }
 
+/* 공통 모달 너비와 높이를 제한해 좁은 화면에서도 가장자리 여백을 남긴다. */
 dialog {
   max-width: min(454px, calc(100% - 2 * var(--gutter)));
   width: 100%;
@@ -103,6 +105,7 @@ dialog {
 dialog::backdrop { background: rgb(24 21 31 / .32); }
 dialog form { display: grid; gap: 17px; font-size: .8125rem; }
 dialog .field :is(input, select, textarea) { border-radius: 9px; }
+/* 모달의 취소·확인 버튼을 한곳에 모으고, 확인만 필요한 경우도 같은 영역을 쓴다. */
 .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dialog-actions .button { border-radius: 10px; }
 

@@ -82,6 +82,7 @@ before=$(snapshot)
 [[ $(wc -l <<< "$before") -eq 2 && "$before" == *'Same content after restart'* ]] ||
   { echo 'FAIL fixture snapshot missing' >&2; exit 1; }
 printf 'BEFORE\n%s\n' "$before"
+# 같은 컨테이너에서 시작 시각이 달라졌는지 보고, 재시작 후 동일한 행과 시각이 조회되는지도 확인한다.
 before_identity=$(docker inspect "$db" -f '{{.Id}} {{.State.StartedAt}}')
 echo 'docker stop (isolated)'
 docker stop "$db"

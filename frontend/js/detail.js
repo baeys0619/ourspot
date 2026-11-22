@@ -23,6 +23,8 @@ let busy = false;
 let editBase;
 const editFields = ['title', 'category', 'source_url', 'memo'];
 
+// 장소 변경과 코멘트 쓰기가 겹치면 방문 상태를 기준으로 하는 편집 조건이 달라질 수 있다.
+// 같은 화면의 변경 버튼과 폼은 진행 중인 작업에 맞춰 잠근다.
 function updateControls() {
   const locked = busy || Boolean(comments?.pending);
   article.setAttribute('aria-busy', String(busy));
@@ -43,6 +45,8 @@ function render() {
   article.hidden = false;
 }
 
+// 처음 진입할 때 로그인 사용자로 코멘트 화면을 준비한다.
+// 이후 코멘트 조회에서도 이 함수를 호출해 장소 버전과 방문 상태를 다시 확인한다.
 async function loadPlace() {
   try {
     if (!comments) {
@@ -86,6 +90,7 @@ async function refreshDetail() {
   return await loadPlace() && await comments.refresh();
 }
 
+// 장소가 없거나 접근할 수 없으면 상세와 수정창을 닫고 같은 안내를 표시한다.
 function showMissing() {
   place = undefined;
   comments?.missing();
@@ -121,7 +126,8 @@ function editableValues(current) {
 }
 
 function showLatestInForm() {
-  // 원격 변경을 보여 주면서 저장하지 않은 입력은 재검토할 수 있도록 그대로 둔다.
+  // 이전에 읽은 값 그대로인 필드만 서버의 최신 값으로 교체한다.
+  // 직접 바꾼 입력은 유지하고, 현재 저장된 내용을 따로 표시해 다시 비교할 수 있게 한다.
   const latest = editableValues(place);
   for (const key of editFields) {
     if (form.elements[key].value === editBase[key]) form.elements[key].value = latest[key];
@@ -135,6 +141,7 @@ function showLatestInForm() {
   formLatest.hidden = false;
 }
 
+// 수정·방문 변경·삭제를 한 번에 하나씩 처리한다. 버전 충돌 시 현재 장소를 다시 읽고 저장은 사용자가 다시 요청한다.
 async function change(action, {refreshOnUncertainResult = false} = {}) {
   if (busy || comments?.pending || !place) return;
   busy = true;
@@ -157,6 +164,7 @@ async function change(action, {refreshOnUncertainResult = false} = {}) {
         }
       }
     } else if (error.code === 'AFTER_COMMENTS_EXIST') {
+      // 최신 상태와 기록을 표시한 뒤, 각 작성자가 자기 방문 후 기록을 먼저 지워야 한다고 안내한다.
       await refreshDetail();
       if (!place) return;
       await actionDialog({
@@ -167,6 +175,7 @@ async function change(action, {refreshOnUncertainResult = false} = {}) {
     } else if (error.status === 404) {
       showMissing();
     } else if (refreshOnUncertainResult && (!error.status || error.status >= 500)) {
+      // 응답이 끊기거나 서버 오류가 나도 변경이 저장됐을 수 있다. 같은 요청을 다시 보내는 대신 방문 상태를 조회한다.
       const wasVisited = place.is_visited;
       const refreshed = await refreshDetail();
       if (!refreshed) feedback('방문 상태 변경을 확인하지 못했어요. 다시 시도해 주세요.', true);
@@ -185,6 +194,7 @@ async function change(action, {refreshOnUncertainResult = false} = {}) {
   }
 }
 
+// 폼을 열 때의 값을 저장해 둔다. 이후 재조회가 필요해지면 사용자가 바꾼 항목과 그대로 둔 항목을 구분하는 기준이 된다.
 edit.addEventListener('click', () => {
   editBase = editableValues(place);
   for (const key of editFields) form.elements[key].value = editBase[key];
@@ -207,6 +217,8 @@ form.addEventListener('submit', async event => {
   showFieldErrors(form, errors);
   if (Object.keys(errors).length) return;
   const fieldErrors = await change(async current => {
+    // 수정창의 기준값과 달라졌고 서버의 현재 값과도 다른 필드만 보낸다.
+    // 비운 URL과 메모는 placeFormValues에서 null로 바뀌므로 폼에 보이는 값과 전송할 값을 각각 비교한다.
     const changes = Object.fromEntries(Object.entries(values)
       .filter(([key, value]) => form.elements[key].value !== editBase[key] && value !== current[key]));
     if (Object.keys(changes).length) ({place} = await patchPlace(current, changes));
@@ -220,6 +232,7 @@ form.addEventListener('submit', async event => {
 visit.addEventListener('click', async () => {
   await change(async current => {
     ({place} = await patchPlace(current, {is_visited: !current.is_visited}));
+    // 서버에서 받은 방문 상태를 먼저 표시하고 코멘트를 다시 읽는다. 그사이 상대가 바꿨다면 최신 상태를 안내한다.
     const applied = place.is_visited;
     render();
     await comments.refresh();
@@ -239,6 +252,7 @@ remove.addEventListener('click', async () => {
       confirm: '장소 삭제', style: 'secondary danger',
     });
     if (!confirmed) return;
+    // 확인창을 열 때 본 버전으로 삭제를 요청한다. 서버에서 204를 받은 뒤 보관함으로 돌아간다.
     await deletePlace(current);
     window.location.replace('/index.html?notice=place-deleted');
   });

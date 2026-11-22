@@ -1,3 +1,4 @@
+// 서버에서 받은 이름과 메모는 textContent로 넣어 DOM에 문자 그대로 표시한다.
 export function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -5,6 +6,7 @@ export function element(tag, text, className) {
   return node;
 }
 
+// 필드 이름으로 오류 메시지를 찾고, 연결된 안내 요소와 aria-invalid를 갱신한다. 첫 오류 입력란으로 포커스를 옮긴다.
 export function showFieldErrors(form, errors = {}) {
   let firstInvalid;
   for (const field of form.querySelectorAll('[aria-describedby]')) {
@@ -58,6 +60,7 @@ export function isCalendarDate(value) {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+// 등록과 상세 수정에서 공통으로 쓰는 폼 검사다. 선택 입력이 비면 null을 보내고, 내용이 있는 메모의 공백은 보존한다.
 export function placeFormValues(form) {
   const fields = new FormData(form);
   const title = String(fields.get('title')).trim();
@@ -72,16 +75,19 @@ export function placeFormValues(form) {
   return {errors, values: {title, category, source_url: source || null, memo: memo.trim() ? memo : null}};
 }
 
+// 등록 시각에는 시간대가 있으므로 서울 기준 날짜로 표시한다. 예정일은 아래 함수에서 달력 문자열로 다룬다.
 export function formatTimestamp(value, full = false) {
   return (full ? fullDate : shortDate).format(new Date(value));
 }
 
-// DATE 필드는 시간대 변환 없이 표시하고, 오래된 장소는 서울 달력의 두 날짜를 비교한다.
+// 예정일은 시각이 없는 DATE 값이므로 연·월·일을 나눠 표시만 바꾼다.
 export function formatPlannedDate(value, full = false) {
   const [year, month, day] = value.split('-').map(Number);
   return (full ? year + '년 ' : '') + month + '월 ' + day + '일';
 }
 
+// 방문 완료가 먼저다. 미방문 장소는 등록 시각을 서울 날짜로 바꿔 오늘과 비교한다.
+// 30일은 경과 시간 720시간이 아닌 달력의 날짜 차이이며, 기준은 최초 등록일이다.
 export function placeStatus(place, now = new Date()) {
   if (place.is_visited) return ['방문 완료', 'visited'];
   const saved = calendarDate.format(new Date(place.created_at));

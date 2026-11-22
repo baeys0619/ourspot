@@ -20,6 +20,7 @@ a { color: var(--ourspot-primary); }
 .muted { color: var(--ourspot-text-secondary); }
 .fine-print { font-size: .75rem; color: var(--ourspot-text-secondary); }
 
+/* 화면 공통 너비와 좌우 여백. 좁은 화면에서는 내용 너비를 줄여 양쪽 여백을 유지한다. */
 .frame {
   width: min(var(--frame-width), calc(100% - 2 * var(--gutter)));
   margin-inline: auto;
@@ -45,11 +46,13 @@ a { color: var(--ourspot-primary); }
 
 .skip-link:not(:focus) { clip-path: inset(50%); }
 
+/* 화면 너비에 따라 보조 문구와 조작 요소의 표시를 전환한다. */
 @media (max-width: 767px) {
   .desktop { display: none !important; }
   .mobile { display: revert; }
 }
 
+/* 가장 좁은 화면에서는 공통 좌우 여백을 한 단계 더 줄인다. */
 @media (max-width: 359px) {
   :root { --gutter: 16px; }
 }

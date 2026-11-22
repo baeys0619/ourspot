@@ -116,6 +116,7 @@ def verify(install_id, passwords):
         return tuple(json.loads(request(p, cookie=cookies[1])[0])['data'] for p in
                      (path, path + '/comments', f'/api/places?planned_date={day}'))
 
+    # 격리 MySQL을 재시작하기 전후로 상세·날짜별 목록·코멘트 응답을 비교한다. 건수 외에 ID와 내용이 같은지도 확인한다.
     before = snapshot()
     check(before[0]['place']['title'] == title and before[0]['place']['planned_date'] == day and
           before[1]['comments'] == [comment] and before[0]['place'] in before[2]['places'],

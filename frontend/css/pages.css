@@ -1,3 +1,4 @@
+/* 로그인 화면은 넓을 때 서비스 소개와 로그인 카드를 두 열로 배치한다. */
 .login-header { grid-template-columns: 4.09fr 1fr; min-height: 74px; font-size: .8125rem; }
 .login-layout { display: grid; grid-template-columns: minmax(0, 570fr) minmax(0, 480fr); gap: min(5vw, 70px); padding-top: 80px; }
 .login-intro { padding-top: 46px; font-size: 1.25rem; }
@@ -46,6 +47,7 @@
   font-size: .8125rem;
 }
 
+/* 보관함의 목록과 선택 상세를 나란히 놓는다. 좁은 화면에서는 선택 상세 영역을 숨긴다. */
 .library-grid { display: grid; grid-template-columns: minmax(0, 642fr) minmax(0, 446fr); gap: 32px; align-items: start; }
 .place-list { padding: 0; list-style: none; }
 .place-row { border-bottom: 1px solid var(--ourspot-border); }
@@ -200,6 +202,7 @@
 .detail-actions button { font-size: .8125rem; }
 #detail-notice:not(:empty), #plan-notice:not(:empty) { margin-top: 12px; }
 
+/* 작은 화면에서는 순서·제외 버튼을 장소 이름 아래 한 줄에 배치하고 후보 모달을 여는 버튼을 표시한다. */
 @media (max-width: 767px) {
   .plans { padding-block: 38px; }
   .plans-intro { grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 0; border: 0; }

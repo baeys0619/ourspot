@@ -7,6 +7,7 @@ const phaseNames = {before: '방문 전', after: '방문 후'};
 const limit = 1000;
 const contentError = '코멘트를 1~1000자로 입력해 주세요.';
 
+// 상세 화면에서 현재 장소와 사용자 정보를 받아 코멘트를 표시한다. 재조회와 인증 만료는 상세 화면의 함수와 연결한다.
 export function createComments({user, getPlace, loadPlace, reload, onMissing, onExpired, onPending}) {
   const byId = id => document.getElementById(id);
   const section = byId('comments');
@@ -31,10 +32,13 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
   let missingPlace = false;
   let editorPhase;
 
+  // 표시 이름 대신 로그인 사용자의 숫자 ID로 자기 기록을 구분한다.
+  // 내 카드에만 작업 버튼을 붙인다. 미방문이면 방문 전 기록, 방문 완료면 방문 후 기록을 편집할 수 있다.
   const isOwn = record => record.user_id === user.id;
   const canEdit = phase => Boolean(getPlace()) && getPlace().is_visited === (phase === 'after');
   const endpoint = () => '/api/places/' + getPlace().id + '/comments';
 
+  // 상세 변경 중에는 코멘트 카드의 작업 버튼을 잠근다. 코멘트를 보내는 중에는 초안을 읽을 수 있고 입력이나 취소는 막는다.
   function updateControls(detailBusy) {
     section.setAttribute('aria-busy', String(pending || refreshing));
     for (const button of phases.querySelectorAll('button')) button.disabled = pending || detailBusy;
@@ -65,6 +69,7 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
     input.setAttribute('aria-invalid', String(Boolean(message)));
   }
 
+  // 수정할 때는 본인 기록을 채우고, 처음 쓰는 단계라면 빈 입력을 연다.
   function openEditor(phase, ownRecord) {
     editorPhase = phase;
     byId('comment-dialog-title').textContent = phaseNames[phase] + ' 코멘트 ' + (ownRecord ? '수정' : '작성');
@@ -168,12 +173,13 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
     showState('코멘트를 불러오는 중…');
     onPending();
     try {
-      // 장소와 코멘트는 별도 GET이다. 중간에 장소가 바뀌면 새 장소 버전으로 다시 조회해
-      // 이전 방문 상태와 새 코멘트가 섞인 화면을 표시하지 않는다.
+      // 코멘트를 읽기 전후로 장소 버전을 비교한다. 중간에 장소가 바뀌었으면 새 방문 상태를 기준으로 한 번 더 조회하고,
+      // 두 번째에도 버전이 달라지면 목록을 표시하지 않고 다시 시도하도록 안내한다.
       for (let attempt = 0; attempt < 2; attempt++) {
         const version = getPlace().updated_at;
         const snapshot = await fetchJSON(endpoint());
         if (!(await loadPlace())) return false;
+        // 비교하는 값은 장소 버전이다. 코멘트만 바뀐 경우에는 이 값이 그대로이므로 코멘트 조회는 그 요청 시점의 결과를 표시한다.
         if (getPlace().updated_at === version) {
           records = snapshot.comments;
           ready = true;
@@ -195,6 +201,7 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
     return ready;
   }
 
+  // 삭제 확인창을 열거나 저장·재조회를 진행하는 동안 새 코멘트 작업을 받지 않는다. 화면 잠금은 상세와 공유한다.
   async function run(action) {
     if (pending) return;
     pending = true;
@@ -219,6 +226,7 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
       if (refreshed) message += ' 최신 장소와 코멘트를 다시 불러왔어요.';
     }
     if (dialog.open) {
+      // 유효성 오류는 해당 입력란에 표시한다. 다른 저장 오류도 편집창을 닫지 않으므로 초안을 다시 확인할 수 있다.
       if (failure.status === 422) {
         validate(failure.fieldErrors?.content || contentError);
         input.focus();
@@ -299,6 +307,7 @@ export function createComments({user, getPlace, loadPlace, reload, onMissing, on
         await reportFailure(failure, '저장');
         return;
       }
+      // 저장 응답을 받은 뒤 상세와 기록을 갱신한다. 재조회 중 만료되어 초안을 보여 주는 경우에는 창을 유지한다.
       inform(phaseNames[editorPhase] + ' 코멘트를 저장했어요.');
       await reload();
       if (!expired) dialog.close();

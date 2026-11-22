@@ -25,6 +25,8 @@ function button(label, className, action) {
   return node;
 }
 
+// 조회가 끝나기 전에는 일정 변경을 막는다. 쓰기 중에는 날짜도 고정한다.
+// 첫째 장소의 올리기와 마지막 장소의 내리기는 조회가 끝나도 비활성 상태로 둔다.
 function updateControls() {
   results.setAttribute('aria-busy', String(writing || Boolean(request)));
   dateInput.disabled = writing || byId('account').hidden;
@@ -47,6 +49,8 @@ function planAction(label, className, place, kind, action, limit = false) {
   return control;
 }
 
+// 서버가 방문 순서로 정렬한 목록에는 방문 완료 장소도 포함된다.
+// 순서 변경은 대상 장소의 버전과 새 번호로 요청한다. 다른 장소의 번호는 서버가 함께 조정한다.
 function renderPlan(places) {
   byId('plan-count').textContent = places.length + '곳';
   byId('plan-count').hidden = false;
@@ -73,6 +77,7 @@ function renderPlan(places) {
       order.append(element('span', ' 순서', 'mobile'));
       controls.append(order);
     }
+    // 제외는 날짜를 비우는 수정이다. 장소 삭제 API를 부르지 않으므로 보관함과 코멘트는 그대로 남는다.
     const remove = planAction('일정에서 제외', 'text-button', place, 'remove', () => mutate(remove, async () => {
       const confirmed = await actionDialog({
         title: '일정에서 제외할까요?',
@@ -89,6 +94,8 @@ function renderPlan(places) {
   }
 }
 
+// 미방문 목록에서 이미 보고 있는 날짜에 배정된 장소를 뺀다.
+// 다른 날짜에 배정된 장소는 후보에 남기고, 추가할 때 이동 여부를 묻는다.
 function renderCandidates(places, date) {
   candidateList.replaceChildren();
   const candidates = places.filter(place => place.planned_date !== date);
@@ -128,7 +135,10 @@ async function loadPlans(date) {
     }
     status.textContent = '일정을 불러오는 중…';
     status.hidden = false;
+    // 두 조회는 별도 요청이다. 나중에 장소를 바꿀 때는 각 행에서 받은 버전을 서버가 다시 확인한다.
     const options = {signal: controller.signal};
+    // 선택한 날짜의 일정과 미방문 후보를 동시에 요청한다.
+    // 이전 요청은 취소하되, 두 응답이 이미 도착했더라도 현재 요청인지 다시 확인한다.
     const [{places}, {places: candidates}] = await Promise.all([
       fetchJSON('/api/places?' + new URLSearchParams({planned_date: date}), options),
       fetchJSON('/api/places?status=unvisited', options),
@@ -158,6 +168,8 @@ async function loadPlans(date) {
   }
 }
 
+// 확인창을 여는 순간부터 조회가 끝날 때까지 다른 일정 변경을 막는다.
+// 성공했거나 장소 정보가 오래된 경우 현재 날짜를 다시 읽어 서버가 정한 순서와 후보를 표시한다.
 async function mutate(control, change, success) {
   if (writing || !ready) return;
   writing = true;
@@ -172,6 +184,7 @@ async function mutate(control, change, success) {
     if (sessionExpired(error)) returnToLogin(true);
     else {
       feedback(error.status < 500 ? error.message : '일정을 변경하지 못했어요. 다시 시도해 주세요.', true);
+      // 충돌이나 대상의 상태 변경을 알게 되면 목록만 다시 읽는다. 사용자가 새 상태를 보고 다음 작업을 결정한다.
       if (['UPDATE_CONFLICT', 'PLACE_ALREADY_VISITED', 'NOT_FOUND'].includes(error.code)) {
         await loadPlans(dateInput.value);
       }
@@ -179,6 +192,7 @@ async function mutate(control, change, success) {
   } finally {
     writing = false;
     updateControls();
+    // 목록을 다시 그리면 원래 버튼이 사라질 수 있다. 같은 장소의 같은 버튼을 먼저 찾아 포커스를 돌려준다.
     const replacement = results.querySelector('[data-plan-action="' + control.dataset.planAction + '"]');
     if (replacement?.offsetWidth && !replacement.disabled) replacement.focus();
     else if (mobileAdd.offsetWidth && !mobileAdd.disabled) mobileAdd.focus();
@@ -186,6 +200,7 @@ async function mutate(control, change, success) {
   }
 }
 
+// 날짜를 바꾸면 이전 목록과 건수를 비운다. 유효한 날짜는 주소에도 넣어 새로고침 뒤 같은 일정을 열 수 있게 한다.
 function selectDate() {
   const date = dateInput.value;
   feedback('');
@@ -198,6 +213,7 @@ function selectDate() {
   loadPlans(date);
 }
 
+// 작은 화면에서는 기존 후보 목록을 모달 안으로 옮긴다. 목록을 복제하지 않아 조회 결과와 버튼 상태를 함께 유지할 수 있다.
 mobileAdd.addEventListener('click', () => {
   byId('candidate-dialog-body').append(panel);
   picker.showModal();
@@ -225,6 +241,7 @@ async function start() {
   }
 }
 
+// 주소에 유효한 날짜가 있으면 그 일정을 열고, 그 외에는 서울 기준 오늘을 선택한다.
 const initial = new URLSearchParams(location.search).get('date');
 dateInput.value = isCalendarDate(initial) ? initial : seoulDate();
 start();
