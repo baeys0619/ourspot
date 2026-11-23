@@ -6,13 +6,15 @@
 
 ### Docker Hub에서 설치
 
-게시된 세 앱은 `linux/amd64`다. 일반 설치에는 AMD64 Docker 엔진을 사용한다. 기존 Ubuntu 24.04 ARM64에서는 §2의 개별 QEMU 실행으로 격리 검증할 수 있다. 아래 세 digest는 원격 태그의 매니페스트에서 확인했다. 설치에서는 `infra/images.env`의 digest 참조를 사용한다.
+게시된 세 앱은 `linux/amd64`다. 일반 설치에는 AMD64 Docker 엔진을 사용한다. 기존 Ubuntu 24.04 ARM64에서는 §2의 개별 QEMU 실행으로 격리 검증할 수 있다. 아래 표는 2026-11-23 KST에 Docker Hub의 `1.0` 태그에서 확인한 최종 게시 이미지다. `--hub` 설치에서는 `infra/images.env`의 `FRONT_HUB`, `USER_HUB`, `PLACE_HUB`에 고정된 다이제스트를 사용한다.
 
 | 앱 | 운영 ARM64 태그 | Docker Hub Public 태그 | 원격 매니페스트 SHA-256 |
 | --- | --- | --- | --- |
-| Frontend | `ourspot-front:0.4` | [`baeyunsun0619/ourspot-front:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-front/tags) | `ff40dff0f013d79465e05e21a014d766d0a4bd017add67b1c373c808afa50688` |
-| User API | `ourspot-user-api:0.2` | [`baeyunsun0619/ourspot-user-api:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-user-api/tags) | `9ddac6a412ea6a90967b752c6944fc7e2e4d942110a619e661a4e254bf981eca` |
-| Place API | `ourspot-place-api:0.6` | [`baeyunsun0619/ourspot-place-api:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-place-api/tags) | `f81a785ff9d3d17b0adca22b4c16b3a5b85bb362a6debd44d49172962b33b7e1` |
+| Frontend | `ourspot-front:0.4` | [`baeyunsun0619/ourspot-front:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-front/tags) | `f8832a714e64d565f0cea1eee18361fbcb25b194fcf9667c0c46d6a005951d87` |
+| User API | `ourspot-user-api:0.2` | [`baeyunsun0619/ourspot-user-api:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-user-api/tags) | `c36d15b76f603203138ccf01013c018d37bbf4cfc6740addbb4b33dc8ea350bd` |
+| Place API | `ourspot-place-api:0.6` | [`baeyunsun0619/ourspot-place-api:1.0`](https://hub.docker.com/r/baeyunsun0619/ourspot-place-api/tags) | `6f76904dd352b55db073d78c83da07c3b527186fa7413312cfab76b7799513d5` |
+
+기존 시연 영상과 §4의 2026-11-22 격리 검증은 재게시 전 이미지를 기준으로 한다. 당시 이미지에 고정된 세 다이제스트는 위 표의 최종 게시 값과 다르다. [재게시 전 이미지 목록](https://github.com/baeys0619/ourspot/blob/ecc19fd1729d729b13f9dd82d35837fda98b30e8/infra/images.env#L14-L16)
 
 운영과 게시 이미지는 같은 앱 소스를 각 CPU 아키텍처용으로 빌드한 결과다. Frontend와 API 코드는 각각의 Dockerfile에 의해 이미지에 복사된다. 설치에 필요한 저장소 파일은 초기화 SQL, Nginx 설정, 이미지 목록과 설치 스크립트다.
 
